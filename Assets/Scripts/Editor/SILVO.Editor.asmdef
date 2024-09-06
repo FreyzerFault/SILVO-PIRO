@@ -1,0 +1,16 @@
+{
+    "name": "SILVO.Editor",
+    "rootNamespace": "SILVO",
+    "references": ["GUID:29cc0df3b268df442829ff251f4aad14"],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
