@@ -76,5 +76,5 @@ crashlytics-build.properties
 
 
 # Datos de terreno muy pesados
-# /[Aa]ssets/Resources/Map Data/
-# /[Aa]ssets/Resources/Map FBXs/
+/[Aa]ssets/Resources/Map Data/
+/[Aa]ssets/Resources/Map FBXs/
