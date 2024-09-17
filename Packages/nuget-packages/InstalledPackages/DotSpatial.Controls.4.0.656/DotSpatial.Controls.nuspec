@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>DotSpatial.Controls</id>
+    <version>4.0.656</version>
+    <authors>DotSpatial Team</authors>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <projectUrl>https://github.com/DotSpatial/DotSpatial/</projectUrl>
+    <description>Windows Forms controls, includes a map control and legend control.</description>
+    <copyright>Copyright © 2012 - 2022 DotSpatial Team</copyright>
+    <tags>Spatial GIS DotSpatial</tags>
+    <dependencies>
+      <group targetFramework="net6.0-windows7.0">
+        <dependency id="DotSpatial.Data.Forms" version="4.0.656" exclude="Build,Analyzers" />
+        <dependency id="DotSpatial.Data" version="4.0.656" exclude="Build,Analyzers" />
+        <dependency id="DotSpatial.Extensions" version="4.0.656" exclude="Build,Analyzers" />
+        <dependency id="DotSpatial.Modeling.Forms" version="4.0.656" exclude="Build,Analyzers" />
+        <dependency id="DotSpatial.Projections.Forms" version="4.0.656" exclude="Build,Analyzers" />
+        <dependency id="DotSpatial.Projections" version="4.0.656" exclude="Build,Analyzers" />
+        <dependency id="DotSpatial.Serialization" version="4.0.656" exclude="Build,Analyzers" />
+        <dependency id="DotSpatial.Symbology.Forms" version="4.0.656" exclude="Build,Analyzers" />
+        <dependency id="DotSpatial.Symbology" version="4.0.656" exclude="Build,Analyzers" />
+        <dependency id="NetTopologySuite" version="2.4.0" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+    <frameworkReferences>
+      <group targetFramework="net6.0-windows7.0">
+        <frameworkReference name="Microsoft.WindowsDesktop.App.WindowsForms" />
+      </group>
+    </frameworkReferences>
+  </metadata>
+</package>

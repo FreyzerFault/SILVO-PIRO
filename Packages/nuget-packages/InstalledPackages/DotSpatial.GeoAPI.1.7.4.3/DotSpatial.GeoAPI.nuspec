@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>DotSpatial.GeoAPI</id>
+    <version>1.7.4.3</version>
+    <authors>DotSpatial Team, NetTopologySuite - Team</authors>
+    <owners>dotspatial</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <licenseUrl>http://geoapi.codeplex.com/license</licenseUrl>
+    <projectUrl>https://github.com/DotSpatial/GeoAPI</projectUrl>
+    <description>This is custom build of GeoAPI.NET for DotSpatial project.</description>
+    <copyright>Copyright 2007-2016</copyright>
+    <tags>OGC SFS NTS GIS</tags>
+  </metadata>
+</package>
