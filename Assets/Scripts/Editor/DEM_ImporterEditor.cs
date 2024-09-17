@@ -1,4 +1,6 @@
 using SILVO.Asset_Importers;
+using SILVO.Misc_Utils;
+using SILVO.Terrain;
 using UnityEditor;
 using UnityEngine;
 using UnityEditor.AssetImporters;
@@ -8,48 +10,79 @@ namespace SILVO.Editor
     [CustomEditor(typeof(DEM_Importer))]
     public class DEM_ImporterEditor : ScriptedImporterEditor
     {
-        private static Vector2Int _terrainSize = new(0, 0);
-        private static Vector2Int _heightRange = new(0, 0);
-
-        protected override void Awake()
-        {
-            base.Awake();
-            if (_terrainSize.x != 0) return;
-            UnityEngine.Terrain terrain = UnityEngine.Terrain.activeTerrain;
-            _terrainSize = new Vector2Int((int)terrain.terrainData.size.x, (int)terrain.terrainData.size.z);
-            _heightRange = new Vector2Int((int)terrain.transform.position.y, (int)(terrain.transform.position.y +
-                terrain.terrainData.size.y));
-        }
+        protected override bool needsApplyRevert => false;
 
         public override void OnInspectorGUI()
         {
-            Vector2Int size = serializedObject.FindProperty("mapSize").vector2IntValue;
-            AddLabel("Map Size", $"{size.x} x {size.y}");
+            DEM_Importer importer = (DEM_Importer)target;
+            DEM dem = importer.dem;
+            if (dem == null || dem.IsEmpty)
+            {
+                EditorGUILayout.LabelField("No DEM data. Reimport pls", EditorStyles.boldLabel);
+                return;
+            }
+            TiffReader.TiffMetaData metaData = dem.metaData;
             
-            int bits = serializedObject.FindProperty("bitsPerSample").intValue;
-            string format = serializedObject.FindProperty("format").stringValue;
-            AddLabel("Data Format", $"{format} {bits} bits");
+            EditorGUILayout.BeginHorizontal();
+            {
+                EditorGUILayout.BeginVertical("box", GUILayout.MaxWidth(80));
+
+                // Show texture preview in Low Res
+                Texture2D tex = importer.texture;
+                
+                if (tex == null)
+                {
+                    EditorGUILayout.LabelField("No texture. Reimport pls", EditorStyles.boldLabel);
+                    tex = Texture2D.blackTexture;
+                }
+                
+                EditorGUI.DrawPreviewTexture(GUILayoutUtility.GetRect(80, 80), tex);
+
+                EditorGUILayout.EndVertical();
+            }
+            {
+                EditorGUILayout.BeginVertical();
+
+                EditorGUILayout.LabelField($"{metaData.width} x {metaData.height}");
+                EditorGUILayout.LabelField($"{metaData.format} {metaData.bitsPerSample} bits");
+                EditorGUILayout.LabelField($"Height: {importer.minHeight:F1} - {importer.maxHeight:F1} m");
+
+                EditorGUILayout.EndVertical();
+            }
             
-            float maxHeight = serializedObject.FindProperty("maxHeight").floatValue;
-            float minHeight = serializedObject.FindProperty("minHeight").floatValue;
-            AddLabel("Height Range", $"{minHeight} - {maxHeight}");
+            EditorGUILayout.EndHorizontal();
             
             EditorGUILayout.Separator();
 
-            _terrainSize = EditorGUILayout.Vector2IntField(new GUIContent("Terrain Extension"), _terrainSize);
-            _heightRange = EditorGUILayout.Vector2IntField(new GUIContent("Height Range"), _heightRange);
-            
-            // Apply Map to Active Terrain
-            if (GUILayout.Button("Apply to Terrain"))
             {
-                DEM_Importer importer = (DEM_Importer) target;
-                importer.ApplyToTerrain(_terrainSize, _heightRange);
+                EditorGUILayout.BeginHorizontal();
+
+                SerializedProperty sampleDistProp = serializedObject.FindProperty("sampleDist");
+                if (sampleDistProp != null)
+                {
+
+                    GUILayout.Label("Distance sample <-> sample:", EditorStyles.boldLabel,
+                        GUILayout.ExpandWidth(false));
+                    sampleDistProp.floatValue = EditorGUILayout.FloatField(sampleDistProp.floatValue);
+                    serializedObject.ApplyModifiedProperties();
+                }
+
+                EditorGUILayout.EndHorizontal();
             }
             
-            ApplyRevertGUI();
+            AddLabeledValue("Terrain Real Size", importer.dem.TerrainSizeBySampleDistance(importer.sampleDist).ToString("F1"));
+            
+            EditorGUILayout.Separator();
+            
+            // Apply Map to Active Terrain
+            if (dem.heightData.Length > 0 && GUILayout.Button("Apply to Terrain")) 
+                dem.ApplyToActiveTerrain(importer.sampleDist);
         }
-        
-        private static void AddLabel(string label, string value) => 
+
+        private static void AddLabeledValue(string label, string value) => 
             EditorGUILayout.LabelField(new GUIContent(label), new GUIContent(value));
+        
+        private static void AddFloatField(string label, ref float value) => 
+            value = EditorGUILayout.FloatField(new GUIContent(label), value);
     }
 }

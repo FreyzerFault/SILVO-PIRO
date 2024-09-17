@@ -7,6 +7,8 @@ namespace SILVO.Terrain
 {
     public class TerrainAnalizer : MonoBehaviour
     {
+        public bool showInfo = false;
+        
         private UnityEngine.Terrain terrain = null;
         
         private void Awake()
@@ -16,7 +18,10 @@ namespace SILVO.Terrain
 
         void Start()
         {
-            ScaleMap(10);
+            // ScaleMap(10);
+            
+            if (!showInfo) return;
+            
             
             // SIZE in real world units
             Vector3 size = terrain.terrainData.size;
