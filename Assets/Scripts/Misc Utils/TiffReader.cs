@@ -3,6 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Net.Http.Headers;
 using BitMiracle.LibTiff.Classic;
+using DavidUtils.ExtensionMethods;
+using DotSpatial.Data;
 using UnityEngine;
 
 namespace SILVO.Misc_Utils
@@ -34,10 +36,19 @@ namespace SILVO.Misc_Utils
         
         public static (float[], TiffMetaData) ReadTiff(string path)
         {
+            
             // OPEN TIFF
             Tiff tiff = Tiff.Open(path, "r");
             if (tiff == null)
                 return (Array.Empty<float>(), TiffMetaData.DefaultMetaData);
+
+            Debug.Log($"<color=orange>Model TiePoint Tag: {tiff.GetField(TiffTag.GEOTIFF_MODELTIEPOINTTAG)?[0]}\n" +
+                      $"Geo ASCII Params Tag: {tiff.GetField(TiffTag.GEOTIFF_GEOASCIIPARAMSTAG)?[0]}\n" +
+                      $"Geo Key Directory Tag: {tiff.GetField(TiffTag.GEOTIFF_GEOKEYDIRECTORYTAG)?[0]}\n" +
+                      $"Model Pixel Scale Tag: {tiff.GetField(TiffTag.GEOTIFF_MODELPIXELSCALETAG)?[0]}\n" +
+                      $"Geo Double Params Tag: {tiff.GetField(TiffTag.GEOTIFF_GEODOUBLEPARAMSTAG)?[0]}\n" +
+                      $"Model Transformation Tag: {tiff.GetField(TiffTag.GEOTIFF_MODELTRANSFORMATIONTAG)?[0]}</color>");
+             
             
             // READ TIFF 
             tiff.ReadDirectory();
@@ -138,6 +149,31 @@ namespace SILVO.Misc_Utils
             }
 
             return converted;
+        }
+
+        #endregion
+
+
+        #region USING DOT SPATIAL LIB
+
+        public static (float[], TiffMetaData) ReadGeoTiff(string path)
+        {
+            if (Raster.OpenFile(path) is not Raster raster)
+                throw new FileLoadException("Error READING GeoTIFF file", path);
+
+            Debug.Log($"Raster loaded: {raster.Filename}. Type: {raster.DataType}");
+
+            var rasterFloat = raster.ToFloatRaster();
+
+            float[] data = rasterFloat.Data.Flatten();
+
+            var metaData = new TiffMetaData(
+                (int)rasterFloat.Extent.Width,
+                (int)rasterFloat.Extent.Height,
+                raster.ByteSize * 8, 
+                raster.DataType.ToString());
+
+            return (data, metaData);
         }
 
         #endregion

@@ -1,18 +1,57 @@
 using System;
 using System.Data;
+using System.Drawing;
 using System.Linq;
-using DavidUtils.Geometry;
 using DavidUtils.Rendering;
 using DavidUtils.ExtensionMethods;
+using DavidUtils.Geometry.Bounding_Box;
 using DotSpatial.Data;
+using NetTopologySuite.Geometries;
 using UnityEditor.AssetImporters;
 using UnityEngine;
+using Point = System.Drawing.Point;
+using Polygon = DavidUtils.Geometry.Polygon;
 
 namespace SILVO.Asset_Importers
 {
     [ScriptedImporter(1, "shp")]
     public class SHP_Importer: ScriptedImporter
     {
+        class Projecter : IProj
+        {
+            public Rectangle ImageRectangle { get; }
+            public Extent GeographicExtents { get; }
+             
+            public Vector2 RectSize => new Vector2(ImageRectangle.Size.Width,  ImageRectangle.Size.Height);
+            public Vector2 ExtentSize => new Vector2((float)GeographicExtents.Width, (float)GeographicExtents.Height);
+            
+            public Projecter(Rectangle imageRectangle, Extent geographicExtents)
+            {
+                ImageRectangle = imageRectangle;
+                GeographicExtents = geographicExtents;
+            }
+            
+            public Projecter(Extent geographicExtents)
+            {
+                Vector3 terrainSize = UnityEngine.Terrain.activeTerrain.terrainData.size;
+                ImageRectangle = new Rectangle(0, 0, (int)terrainSize.x, (int)terrainSize.z);
+                GeographicExtents = geographicExtents;
+            }
+            
+            public Vector2 ReprojectPoint(Vector2 p)
+            {
+                Point drawPoint = this.ProjToPixel(new Coordinate(p.x, p.y));
+                return new Vector2(drawPoint.X, drawPoint.Y);
+            }
+        }
+        
+        [SerializeField] public Texture2D texture;
+        [SerializeField] public Polygon polygon;
+        
+        [SerializeField]
+        public int maxSubPolygonCount = 100;
+        public Vector2 texSize = new Vector2(128, 128);
+            
         public override void OnImportAsset(AssetImportContext ctx)
         {
             string path = ctx.assetPath;
@@ -34,14 +73,19 @@ namespace SILVO.Asset_Importers
             Debug.Log(ParseShape(shape));
             
             // POLYGON
-            Polygon poly = CreatePolygon(shape, true);
+            polygon = CreatePolygon(shape, true);
+            
+            // TEXTURE
+            texture = polygon.ToTexture(texSize);
+            Debug.Log($"<color=cyan>Texture Created. Size: {new Vector2(texture.width, texture.height)}</color>");
             
             // RENDERER OBJECT
-            PolygonRenderer polyRenderer = CreatePolygonRenderer(poly, shp);
+            PolygonRenderer polyRenderer = CreatePolygonRenderer(polygon, shp);
             
             
             ctx.AddObjectToAsset("Main Obj", polyRenderer.gameObject);
             ctx.AddObjectToAsset("MeshFilter", polyRenderer.Mesh);
+            ctx.AddObjectToAsset("Texture", texture);
             ctx.SetMainObject(polyRenderer.gameObject);
         }
         
@@ -57,6 +101,7 @@ namespace SILVO.Asset_Importers
             obj.AddComponent<LineRenderer>();
             
             var polyRenderer = obj.AddComponent<PolygonRenderer>();
+            polyRenderer.maxSubPolygons = maxSubPolygonCount;
             polyRenderer.Polygon = polygon;
 
             return polyRenderer;
@@ -69,21 +114,48 @@ namespace SILVO.Asset_Importers
         
         private Polygon CreatePolygon(Shape shape, bool normalize = false)
         {
-            Vector2[] vertices = new Vector2[shape.Vertices.Length / 2];
-            for (int i = 0; i < shape.Vertices.Length / 2; i++) 
-                vertices[i] = new Vector2((float)shape.Vertices[i*2], (float)shape.Vertices[i*2 + 1]);
+            // PROJECTION
+            var projecter = new Projecter(shape.Range.Extent);
             
-            Polygon poly = new Polygon(vertices).Revert();
+            Coordinate[] vertices = new Coordinate[shape.Vertices.Length / 2];
+            for (var i = 0; i < shape.Vertices.Length / 2; i++) 
+                vertices[i] = new Coordinate(shape.Vertices[i * 2], shape.Vertices[i * 2 + 1]);
+            
+            Polygon poly = new Polygon(vertices.Select(c => new Vector2((float)c.X, (float)c.Y)).ToArray());
+            
+            // Dado la vuelta CW -> CCW y limpiar vertices duplicados y ejes superpuestos
+            poly = poly.Revert();
+            poly.CleanDegeneratePolygon();
+            
+            // REPROJECTION to TERRAIN
+            var reprojectedPoly = new Polygon(poly.Vertices.Select(projecter.ReprojectPoint).ToArray());
             
             if (normalize)
-                poly.NormalizeMinMax(
-                    new Vector2((float)shape.Range.Extent.MinX, (float)shape.Range.Extent.MinY), 
+            {
+                poly = poly.NormalizeMinMax(
+                    new Vector2((float)shape.Range.Extent.MinX, (float)shape.Range.Extent.MinY),
                     new Vector2((float)shape.Range.Extent.MaxX, (float)shape.Range.Extent.MaxY)
                 );
+                reprojectedPoly = reprojectedPoly.NormalizeMinMax(
+                    Vector2.zero,
+                    projecter.RectSize
+                );
+            }
+
+            var reprojPolyVerticesStr = $"{string.Join(", ", reprojectedPoly.Vertices.Take(10))} {(reprojectedPoly.Vertices.Length > 10 ? "..." : "")}";
+            var polyVerticesStr = $"{string.Join(", ", poly.Vertices.Take(10))} {(poly.Vertices.Length > 10 ? "..." : "")}";
+            var polyAABB = new AABB_2D(poly);
+            var reprojPolyAABB = new AABB_2D(reprojectedPoly);
             
             Debug.Log($"<b>Polygon Extracted: ({poly.VertexCount} vertices)</b>\n" +
-                      $"Vertices: <color=teal>{string.Join(", ", poly.Vertices.Take(10))} {(poly.Vertices.Length > 10 ? "..." : "")}</color>\n" +
-                      $"Centroid: <color=cyan>{poly.centroid}\n</color>");
+                      $"Vertices: <color=teal>{polyVerticesStr}</color>\n" +
+                      $"Centroid: <color=cyan>{poly.centroid}\n</color>" +
+                      $"AABB: <color=orange>{polyAABB}</color>\n" +
+                      
+                      $"Reprojected Polygon:\n" +
+                      $"Reprojected Vertices: <color=teal>{reprojPolyVerticesStr}</color>\n" +
+                      $"Reprojected Centroid: <color=cyan>{reprojectedPoly.centroid}</color>\n" +
+                      $"Reprojected AABB: <color=orange>{reprojPolyAABB}</color>\n");
             
             return poly;
         }
@@ -152,7 +224,7 @@ namespace SILVO.Asset_Importers
             var width = (float)extent.Width;
             var height = (float)extent.Height;
 
-            return $"<b>Shape: ({shape.Vertices.Length} vertices)</b>\n" +
+            return $"<b>Shape: ({shape.Vertices.Length / 2} vertices)</b>\n" +
                       $"Extent: <color=orange>[MIN {min}, MAX {max}]. Width: {width}, Height: {height}</color>\n" +
                       $"Vertices: <color=teal>{string.Join(", ", shape.Vertices.Take(10))} {(shape.Vertices.Length > 10 ? "..." : "")}</color>\n";
         }

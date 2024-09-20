@@ -1,7 +1,10 @@
 {
     "name": "SILVO.Editor",
     "rootNamespace": "SILVO",
-    "references": ["GUID:29cc0df3b268df442829ff251f4aad14"],
+    "references": [
+        "GUID:29cc0df3b268df442829ff251f4aad14",
+        "GUID:7f7b2cf5ee3a5414cbb09596b1fee914"
+    ],
     "includePlatforms": [
         "Editor"
     ],
