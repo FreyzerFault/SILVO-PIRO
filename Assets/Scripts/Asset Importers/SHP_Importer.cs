@@ -101,7 +101,7 @@ namespace SILVO.Asset_Importers
             obj.AddComponent<LineRenderer>();
             
             var polyRenderer = obj.AddComponent<PolygonRenderer>();
-            polyRenderer.maxSubPolygons = maxSubPolygonCount;
+            polyRenderer.maxSubPolygonsPerFrame = maxSubPolygonCount;
             polyRenderer.Polygon = polygon;
 
             return polyRenderer;
@@ -111,8 +111,40 @@ namespace SILVO.Asset_Importers
         
 
         #region POLYGON
-        
+
         private Polygon CreatePolygon(Shape shape, bool normalize = false)
+        {
+            Coordinate[] vertices = new Coordinate[shape.Vertices.Length / 2];
+            for (var i = 0; i < shape.Vertices.Length / 2; i++) 
+                vertices[i] = new Coordinate(shape.Vertices[i * 2], shape.Vertices[i * 2 + 1]);
+            
+            Polygon poly = new Polygon(vertices.Select(c => new Vector2((float)c.X, (float)c.Y)).ToArray());
+            
+            // Dado la vuelta CW -> CCW y limpiar vertices duplicados y ejes superpuestos
+            poly = poly.Revert();
+            poly.CleanDegeneratePolygon();
+            
+            if (normalize)
+            {
+                poly = poly.NormalizeMinMax(
+                    new Vector2((float)shape.Range.Extent.MinX, (float)shape.Range.Extent.MinY),
+                    new Vector2((float)shape.Range.Extent.MaxX, (float)shape.Range.Extent.MaxY)
+                );
+            }
+
+            var polyVerticesStr = $"{string.Join(", ", poly.Vertices.Take(10))} {(poly.Vertices.Length > 10 ? "..." : "")}";
+            var polyAABB = new AABB_2D(poly);
+
+            Debug.Log($"<b>Polygon Extracted: ({poly.VertexCount} vertices)</b>\n" +
+                      $"Vertices: <color=teal>{polyVerticesStr}</color>\n" +
+                      $"Centroid: <color=cyan>{poly.centroid}\n</color>" +
+                      $"AABB: <color=orange>{polyAABB}</color>\n");
+            
+            return poly;
+        }
+        
+        // TODO Usar el Poligono Reproyectado
+        private Polygon CreatePolygonReprojected(Shape shape, bool normalize = false)
         {
             // PROJECTION
             var projecter = new Projecter(shape.Range.Extent);
