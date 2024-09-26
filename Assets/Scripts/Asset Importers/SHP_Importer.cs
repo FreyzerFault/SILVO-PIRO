@@ -2,6 +2,7 @@ using System;
 using System.Data;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using DavidUtils.Rendering;
 using DavidUtils.ExtensionMethods;
 using DavidUtils.Geometry.Bounding_Box;
@@ -37,19 +38,22 @@ namespace SILVO.Asset_Importers
                 ImageRectangle = new Rectangle(0, 0, (int)terrainSize.x, (int)terrainSize.z);
                 GeographicExtents = geographicExtents;
             }
+            public Projecter(Shape shape) : this(shape.Range.Extent) { }
             
             public Vector2 ReprojectPoint(Vector2 p)
             {
                 Point drawPoint = this.ProjToPixel(new Coordinate(p.x, p.y));
-                return new Vector2(drawPoint.X, drawPoint.Y);
+                // Y Starts from top
+                return new Vector2(drawPoint.X, ImageRectangle.Height - drawPoint.Y);
             }
+            
+            public Polygon ReprojectPolygon(Polygon p) => 
+                new Polygon(p.Vertices.Select(ReprojectPoint).ToArray());
         }
         
         [SerializeField] public Texture2D texture;
         [SerializeField] public Polygon polygon;
         
-        [SerializeField]
-        public int maxSubPolygonCount = 100;
         public Vector2 texSize = new Vector2(128, 128);
             
         public override void OnImportAsset(AssetImportContext ctx)
@@ -73,10 +77,11 @@ namespace SILVO.Asset_Importers
             Debug.Log(ParseShape(shape));
             
             // POLYGON
-            polygon = CreatePolygon(shape, true);
+            polygon = CreatePolygonReprojected(shape);
+            Polygon normPoly = polygon.NormalizeMinMax(Vector2.zero, new Projecter(shape.Range.Extent).RectSize);
             
             // TEXTURE
-            texture = polygon.ToTexture(texSize);
+            texture = normPoly.ToTexture(texSize);
             Debug.Log($"<color=cyan>Texture Created. Size: {new Vector2(texture.width, texture.height)}</color>");
             
             // RENDERER OBJECT
@@ -101,7 +106,7 @@ namespace SILVO.Asset_Importers
             obj.AddComponent<LineRenderer>();
             
             var polyRenderer = obj.AddComponent<PolygonRenderer>();
-            polyRenderer.maxSubPolygonsPerFrame = maxSubPolygonCount;
+            polyRenderer.generateSubPolygons = false;
             polyRenderer.Polygon = polygon;
 
             return polyRenderer;
@@ -143,11 +148,10 @@ namespace SILVO.Asset_Importers
             return poly;
         }
         
-        // TODO Usar el Poligono Reproyectado
         private Polygon CreatePolygonReprojected(Shape shape, bool normalize = false)
         {
             // PROJECTION
-            var projecter = new Projecter(shape.Range.Extent);
+            var projecter = new Projecter(shape);
             
             Coordinate[] vertices = new Coordinate[shape.Vertices.Length / 2];
             for (var i = 0; i < shape.Vertices.Length / 2; i++) 
@@ -160,7 +164,7 @@ namespace SILVO.Asset_Importers
             poly.CleanDegeneratePolygon();
             
             // REPROJECTION to TERRAIN
-            var reprojectedPoly = new Polygon(poly.Vertices.Select(projecter.ReprojectPoint).ToArray());
+            var reprojectedPoly = projecter.ReprojectPolygon(poly);
             
             if (normalize)
             {
@@ -189,7 +193,7 @@ namespace SILVO.Asset_Importers
                       $"Reprojected Centroid: <color=cyan>{reprojectedPoly.centroid}</color>\n" +
                       $"Reprojected AABB: <color=orange>{reprojPolyAABB}</color>\n");
             
-            return poly;
+            return reprojectedPoly;
         }
 
         #endregion

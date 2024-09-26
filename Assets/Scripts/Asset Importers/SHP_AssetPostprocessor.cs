@@ -31,7 +31,7 @@ namespace SILVO.Asset_Importers
 
         private static void PostProcessSHP(string path)
         {
-            Debug.Log($"Processing SHP file: {path}");
+            // Debug.Log($"Processing SHP file: {path}");
         }
     }
 }
