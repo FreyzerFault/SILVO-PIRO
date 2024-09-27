@@ -13,6 +13,10 @@ namespace SILVO.Terrain
         public string tiffPath;
         public float[] heightData;
         public int width, height;
+        public Vector2 Size => new(width, height);
+        
+        // WORLD COORDS
+        public Vector2 worldOrigin;
         
         public float minHeight, maxHeight;
 
@@ -92,13 +96,12 @@ namespace SILVO.Terrain
         /// <summary>
         /// Get the Real Terrain Size by Sample Distance (between 2 samples)
         /// </summary>
-        public Vector3 TerrainSizeBySampleDistance(float sampleDistance) =>
-            new(width * sampleDistance, maxHeight - minHeight, height * sampleDistance);
+        public Vector3 WorldSize => new(width * metaData.sampleScale.x, maxHeight - minHeight, height * metaData.sampleScale.y);
 
         /// <summary>
         /// Set TerrainData to Terrain & TerrainCollider
         /// </summary>
-        public TerrainData ApplyToActiveTerrain(float sampleDist)
+        public TerrainData ApplyToActiveTerrain()
         {
             var terrain = UnityEngine.Terrain.activeTerrain;
             
@@ -118,7 +121,7 @@ namespace SILVO.Terrain
             terrain.GetComponent<TerrainCollider>().terrainData = tData;
 
             // Terrain Real Size
-            tData.size = TerrainSizeBySampleDistance(sampleDist);
+            tData.size = WorldSize;
             
             return tData;
         }

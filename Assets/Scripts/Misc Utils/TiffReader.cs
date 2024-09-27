@@ -6,6 +6,7 @@ using BitMiracle.LibTiff.Classic;
 using DavidUtils.ExtensionMethods;
 using DotSpatial.Data;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace SILVO.Misc_Utils
 {
@@ -18,16 +19,28 @@ namespace SILVO.Misc_Utils
             public int height;
             public int bitsPerSample;
             public string format;
+            
+            // Geo Data
+            public Vector2 sampleScale;
+            public Vector2 originRaster;
+            public Vector2 originWorld;
+            public string projectionStr;
 
             public static TiffMetaData DefaultMetaData =>
                 new TiffMetaData(0, 0, 0, "not defined");
             
-            public TiffMetaData(int width, int height, int bitsPerSample, string format)
+            public TiffMetaData(int width, int height, int bitsPerSample, string format, 
+                Vector2 sampleScale = default, Vector2 originRaster = default, Vector2 originWorld = default,
+                string projectionStr = "")
             {
                 this.width = width;
                 this.height = height;
                 this.bitsPerSample = bitsPerSample;
                 this.format = format;
+                this.sampleScale = sampleScale;
+                this.originRaster = originRaster;
+                this.originWorld = originWorld;
+                this.projectionStr = projectionStr;
             }
 
             public override string ToString() => 
@@ -36,19 +49,10 @@ namespace SILVO.Misc_Utils
         
         public static (float[], TiffMetaData) ReadTiff(string path)
         {
-            
             // OPEN TIFF
             Tiff tiff = Tiff.Open(path, "r");
             if (tiff == null)
                 return (Array.Empty<float>(), TiffMetaData.DefaultMetaData);
-
-            Debug.Log($"<color=orange>Model TiePoint Tag: {tiff.GetField(TiffTag.GEOTIFF_MODELTIEPOINTTAG)?[0]}\n" +
-                      $"Geo ASCII Params Tag: {tiff.GetField(TiffTag.GEOTIFF_GEOASCIIPARAMSTAG)?[0]}\n" +
-                      $"Geo Key Directory Tag: {tiff.GetField(TiffTag.GEOTIFF_GEOKEYDIRECTORYTAG)?[0]}\n" +
-                      $"Model Pixel Scale Tag: {tiff.GetField(TiffTag.GEOTIFF_MODELPIXELSCALETAG)?[0]}\n" +
-                      $"Geo Double Params Tag: {tiff.GetField(TiffTag.GEOTIFF_GEODOUBLEPARAMSTAG)?[0]}\n" +
-                      $"Model Transformation Tag: {tiff.GetField(TiffTag.GEOTIFF_MODELTRANSFORMATIONTAG)?[0]}</color>");
-             
             
             // READ TIFF 
             tiff.ReadDirectory();
@@ -58,8 +62,47 @@ namespace SILVO.Misc_Utils
             int height = tiff.GetField(TiffTag.IMAGELENGTH)[0].ToInt();
             int bitsPerSample = tiff.GetField(TiffTag.BITSPERSAMPLE)[0].ToInt();
             var format = tiff.GetField(TiffTag.SAMPLEFORMAT)[0].ToString();
+
+            // GEOTIFF Meta Data
+            var keyDirectoryTag = tiff.GetField(TiffTag.GEOTIFF_GEOKEYDIRECTORYTAG);
             
-            var metaData = new TiffMetaData(width, height, bitsPerSample, format);
+            // This are NULL
+            // var geoTiffTag5 = tiff.GetField(TiffTag.GEOTIFF_GEODOUBLEPARAMSTAG);
+            // var geoTiffTag6 = tiff.GetField(TiffTag.GEOTIFF_MODELTRANSFORMATIONTAG);
+
+            // Escala de los pixeles en el mundo real (metros por pixel)
+            var pixelScaleTag = tiff.GetField(TiffTag.GEOTIFF_MODELPIXELSCALETAG);
+            double[] pixelScaleArray = pixelScaleTag[1].ToDoubleArray();
+            Vector2 pixelScale = new Vector2((float)pixelScaleArray[0], (float)pixelScaleArray[1]);
+            
+            // Puntos de origen para transformar de raster a mundo
+            var modelTiepoint = tiff.GetField(TiffTag.GEOTIFF_MODELTIEPOINTTAG);
+            double[] tiepoints = modelTiepoint[1].ToDoubleArray();
+            Vector2 originRaster = new Vector2((float)tiepoints[0], (float)tiepoints[1]);
+            Vector2 originWorld = new Vector2((float)tiepoints[3], (float)tiepoints[4]);
+            
+            // PROJECTION Name
+            var asciiParamsTag = tiff.GetField(TiffTag.GEOTIFF_GEOASCIIPARAMSTAG);
+            
+            var metaData = new TiffMetaData(
+                width, height, bitsPerSample, format, pixelScale,
+                originRaster, originWorld, asciiParamsTag[1].ToString());
+            
+            // DEBUG GEOTIFF TAGS
+            {
+                // string tag1 = string.Join(" | ",
+                //     modelTiepoint.Skip(1).Select(tag => string.Join(", ", tag.ToDoubleArray())));
+                // string tag2 = asciiParamsTag[1].ToString();
+                // string tag3 = string.Join("| ",
+                //     keyDirectoryTag.Skip(1).Select(tag => string.Join(", ", tag.ToIntArray())));
+                // string tag4 = string.Join("| ",
+                //     pixelScaleTag.Skip(1).Select(tag => string.Join(", ", tag.ToDoubleArray())));
+                //
+                // Debug.Log($"<color=orange>Model Tie Point:</color> {tag1}");
+                // Debug.Log($"<color=orange>GEO ASCII Params:</color> {tag2}");
+                // Debug.Log($"<color=orange>GEO Key Directory:</color> {tag3}");
+                // Debug.Log($"<color=orange>Model Pixel Scale:</color> {tag4}");
+            }
             
             // Read Height Values
             var heightMap = new float[width * height];

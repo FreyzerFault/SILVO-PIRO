@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 namespace SILVO.Asset_Importers
 {
-    [ScriptedImporter(1, "tifdem")]
+    [ScriptedImporter(1, "geotif")]
     public class DEM_Importer : ScriptedImporter
     {
         [SerializeField] public DEM dem;
@@ -46,7 +46,7 @@ namespace SILVO.Asset_Importers
                 // ctx.AddObjectToAsset("dem", dem, texture);
                 ctx.SetMainObject(obj);
                 
-                Debug.Log($"IMPORTED {dem}");
+                Debug.Log($"<color=lime>IMPORTED {dem}</color>");
             }
         }
         

@@ -78,15 +78,18 @@ namespace SILVO.Asset_Importers
             
             // POLYGON
             polygon = CreatePolygonReprojected(shape);
-            Polygon normPoly = polygon.NormalizeMinMax(Vector2.zero, new Projecter(shape.Range.Extent).RectSize);
+
+            Polygon distinctVerticesPoly = new Polygon(polygon.Vertices.Distinct().ToArray());
+            Debug.Log($"Polygon Created. {polygon.VertexCount} -> {distinctVerticesPoly.VertexCount} sin duplicados");
+            
+            Polygon normPoly = distinctVerticesPoly.NormalizeMinMax(Vector2.zero, new Projecter(shape.Range.Extent).RectSize);
             
             // TEXTURE
             texture = normPoly.ToTexture(texSize);
             Debug.Log($"<color=cyan>Texture Created. Size: {new Vector2(texture.width, texture.height)}</color>");
             
             // RENDERER OBJECT
-            PolygonRenderer polyRenderer = CreatePolygonRenderer(polygon, shp);
-            
+            PolygonRenderer polyRenderer = CreatePolygonRenderer(distinctVerticesPoly, shp);
             
             ctx.AddObjectToAsset("Main Obj", polyRenderer.gameObject);
             ctx.AddObjectToAsset("MeshFilter", polyRenderer.Mesh);
@@ -106,7 +109,7 @@ namespace SILVO.Asset_Importers
             obj.AddComponent<LineRenderer>();
             
             var polyRenderer = obj.AddComponent<PolygonRenderer>();
-            polyRenderer.generateSubPolygons = false;
+            polyRenderer.generateSubPolygons = true;
             polyRenderer.Polygon = polygon;
 
             return polyRenderer;

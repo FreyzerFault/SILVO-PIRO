@@ -53,30 +53,21 @@ namespace SILVO.Editor
             EditorGUILayout.EndHorizontal();
             
             EditorGUILayout.Separator();
-
-            {
-                EditorGUILayout.BeginHorizontal();
-
-                SerializedProperty sampleDistProp = serializedObject.FindProperty("sampleDist");
-                if (sampleDistProp != null)
-                {
-
-                    GUILayout.Label("Distance sample <-> sample:", EditorStyles.boldLabel,
-                        GUILayout.ExpandWidth(false));
-                    sampleDistProp.floatValue = EditorGUILayout.FloatField(sampleDistProp.floatValue);
-                    serializedObject.ApplyModifiedProperties();
-                }
-
-                EditorGUILayout.EndHorizontal();
-            }
             
-            AddLabeledValue("Terrain Real Size", importer.dem.TerrainSizeBySampleDistance(importer.sampleDist).ToString("F1"));
+            EditorGUILayout.LabelField("Geographical Data", EditorStyles.boldLabel);
+
+            AddLabeledValue("Projection", dem.metaData.projectionStr);
+            AddLabeledValue("Origin Coordinates", new Vector2Int(Mathf.FloorToInt(dem.metaData.originWorld.x), Mathf.FloorToInt(dem.metaData.originWorld.y)).ToString());
+            AddLabeledValue("Sample Scale", $"{dem.metaData.sampleScale.x} x {dem.metaData.sampleScale.y} m");
+
+            Vector3 worldSize = dem.WorldSize;
+            AddLabeledValue("World Size", $"{worldSize.x} x {worldSize.z} x {worldSize.y}");
             
             EditorGUILayout.Separator();
             
             // Apply Map to Active Terrain
             if (dem.heightData.Length > 0 && GUILayout.Button("Apply to Terrain")) 
-                dem.ApplyToActiveTerrain(importer.sampleDist);
+                dem.ApplyToActiveTerrain();
         }
 
         private static void AddLabeledValue(string label, string value) => 
