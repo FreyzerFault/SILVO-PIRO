@@ -11,18 +11,23 @@ namespace SILVO.Terrain
     public class DEM
     {
         public string tiffPath;
-        public float[] heightData;
+        [HideInInspector] public float[] heightData;
         public int width, height;
         public Vector2 Size => new(width, height);
-        
-        // WORLD COORDS
-        public Vector2 worldOrigin;
         
         public float minHeight, maxHeight;
 
         public TiffReader.TiffMetaData metaData;
 
         public bool IsEmpty => heightData.IsNullOrEmpty();
+
+        public Vector2 WorldOrigin => metaData.originWorld;
+        
+        /// <summary>
+        /// Get the Real Terrain Size by Sample Distance (between 2 samples)
+        /// </summary>
+        public Vector3 WorldSize => new(width * metaData.sampleScale.x, maxHeight - minHeight, height * metaData.sampleScale.y);
+        public Vector2 WorldSize2D => new(width * metaData.sampleScale.x, height * metaData.sampleScale.y);
         
         public DEM(string tiffPath)
         {
@@ -93,39 +98,6 @@ namespace SILVO.Terrain
         public float[,] heightDataForTerrain;
         public int resPow2;
         
-        /// <summary>
-        /// Get the Real Terrain Size by Sample Distance (between 2 samples)
-        /// </summary>
-        public Vector3 WorldSize => new(width * metaData.sampleScale.x, maxHeight - minHeight, height * metaData.sampleScale.y);
-
-        /// <summary>
-        /// Set TerrainData to Terrain & TerrainCollider
-        /// </summary>
-        public TerrainData ApplyToActiveTerrain()
-        {
-            var terrain = UnityEngine.Terrain.activeTerrain;
-            
-            if (IsEmpty)
-                throw new Exception("No DEM data found. Try to reimport it");
-            if (terrain?.terrainData == null)
-                throw new Exception("No active terrain found. Create or enable it");
-            // if (heightDataForTerrain == null || heightDataForTerrain.Length == 0)
-            //     throw new Exception("No height data for terrain found. Try to reimport it");
-            
-            TerrainData tData = terrain.terrainData;
-            
-            tData.heightmapResolution = resPow2;
-            tData.SetHeights(0,0,  SampleTo2D(heightData, Mathf.Min(width, height), resPow2));
-            
-            // Collider
-            terrain.GetComponent<TerrainCollider>().terrainData = tData;
-
-            // Terrain Real Size
-            tData.size = WorldSize;
-            
-            return tData;
-        }
-
         public void PrepareHeightDataForTerrain()
         {
             // Map Resolution -> Power of 2 Res
@@ -141,8 +113,8 @@ namespace SILVO.Terrain
         }
         
         /// <summary>
-        /// Muestrea interpolando los valores de altura para adaptarlo a otra resolucion
-        /// Y los convierte en float[,] para aplicarlos al terreno
+        /// Sample and interpolate height values to adapt to another resolution
+        /// And convert them to float[,] to apply to the terrain
         /// </summary>
         private static float[,] SampleTo2D(float[] heightMap, int origRes, int targetRes)
         {

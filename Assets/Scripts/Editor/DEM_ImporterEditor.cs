@@ -1,3 +1,4 @@
+using System.IO;
 using SILVO.Asset_Importers;
 using SILVO.Misc_Utils;
 using SILVO.Terrain;
@@ -43,6 +44,7 @@ namespace SILVO.Editor
             {
                 EditorGUILayout.BeginVertical();
 
+                EditorGUILayout.LabelField($"{Path.GetFileNameWithoutExtension(dem.tiffPath)}", EditorStyles.boldLabel);
                 EditorGUILayout.LabelField($"{metaData.width} x {metaData.height}");
                 EditorGUILayout.LabelField($"{metaData.format} {metaData.bitsPerSample} bits");
                 EditorGUILayout.LabelField($"Height: {importer.minHeight:F1} - {importer.maxHeight:F1} m");
@@ -66,8 +68,8 @@ namespace SILVO.Editor
             EditorGUILayout.Separator();
             
             // Apply Map to Active Terrain
-            if (dem.heightData.Length > 0 && GUILayout.Button("Apply to Terrain")) 
-                dem.ApplyToActiveTerrain();
+            if (!dem.IsEmpty && GUILayout.Button("Apply to Terrain")) 
+                TerrainManager.Instance.DEM = dem;
         }
 
         private static void AddLabeledValue(string label, string value) => 

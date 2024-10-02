@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 9bf4db7193a039142b09794ad84f8424
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: ae4f54fc11df409d9732b09e20eeab44, type: 3}
+  shpfileComponent: {fileID: 8368143971865083686, guid: 9bf4db7193a039142b09794ad84f8424,
+    type: 3}
+  maxSubPolygonCount: 100
+  terrainOffset: 1000

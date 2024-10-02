@@ -20,11 +20,15 @@ namespace SILVO.Misc_Utils
             public int bitsPerSample;
             public string format;
             
+            public Vector2Int Size => new Vector2Int(width, height);
+            
             // Geo Data
             public Vector2 sampleScale;
             public Vector2 originRaster;
             public Vector2 originWorld;
             public string projectionStr;
+
+            public Vector2Int WorldSize => new Vector2Int((int)(width * sampleScale.x), (int)(height * sampleScale.y));
 
             public static TiffMetaData DefaultMetaData =>
                 new TiffMetaData(0, 0, 0, "not defined");
@@ -80,6 +84,9 @@ namespace SILVO.Misc_Utils
             double[] tiepoints = modelTiepoint[1].ToDoubleArray();
             Vector2 originRaster = new Vector2((float)tiepoints[0], (float)tiepoints[1]);
             Vector2 originWorld = new Vector2((float)tiepoints[3], (float)tiepoints[4]);
+            
+            // TIFF starts at the top left corner
+            originWorld.y = originWorld.y - height * pixelScale.y;
             
             // PROJECTION Name
             var asciiParamsTag = tiff.GetField(TiffTag.GEOTIFF_GEOASCIIPARAMSTAG);
