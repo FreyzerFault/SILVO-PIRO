@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>Csv</id>
+    <version>2.0.93</version>
+    <authors>Steve Hansen</authors>
+    <licenseUrl>https://raw.github.com/stevehansen/csv/master/LICENSE</licenseUrl>
+    <icon>icon.png</icon>
+    <projectUrl>https://github.com/stevehansen/csv/</projectUrl>
+    <iconUrl>https://raw.github.com/stevehansen/csv/master/Csv/icon.png</iconUrl>
+    <description>Really simple csv library</description>
+    <copyright>Copyright © Steve Hansen 2015-2020</copyright>
+    <tags>csv</tags>
+    <repository type="git" url="https://github.com/stevehansen/csv.git" commit="82d0058adddd049bd4241d8e070d6c2ef28834a4" />
+    <dependencies>
+      <group targetFramework=".NETFramework4.0" />
+      <group targetFramework=".NETCoreApp3.1" />
+      <group targetFramework=".NETStandard1.0">
+        <dependency id="NETStandard.Library" version="1.6.0" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard2.1" />
+    </dependencies>
+    <frameworkAssemblies>
+      <frameworkAssembly assemblyName="Microsoft.CSharp" targetFramework=".NETFramework4.0" />
+      <frameworkAssembly assemblyName="System" targetFramework=".NETFramework4.0" />
+    </frameworkAssemblies>
+  </metadata>
+</package>

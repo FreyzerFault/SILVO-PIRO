@@ -35,6 +35,7 @@ namespace SILVO.Terrain
         public Extent WorldExtents => _dem.WorldOrigin.ToExtent(_dem.WorldSize2D);
         
         public Vector2 WorldOrigin => _dem.WorldOrigin;
+        public Vector2 WorldSize => _dem.WorldSize2D;
 
         public Action onTerrainSizeChanged;
         public Action onTerrainHeightsChanged;
@@ -83,6 +84,32 @@ namespace SILVO.Terrain
         }
 
         
+
+        #endregion
+
+
+        #region WORLD - TERRAIN CONVERSION
+
+        public Vector2 GetRelativeTerrainPosition(Vector2 worldPosition) =>
+            GetNormalizedPosition(worldPosition) * TerrainSize;
+        
+        public Vector2 GetNormalizedPosition(Vector2 worldPosition) =>
+            (worldPosition - WorldOrigin) / WorldSize;
+
+        public Vector3 GetRelativeTerrainPositionWithHeight(Vector2 worldPosition) =>
+            AddHeight(GetRelativeTerrainPosition(worldPosition));
+
+        #endregion
+
+
+        #region HEIGHTS
+
+
+        public Vector3 AddHeight(Vector2 terrainPos) =>
+            terrainPos.ToV3xz().WithY(GetInterpolatedHeight(terrainPos));
+
+        public float GetInterpolatedHeight(Vector2 worldPosition) =>
+            Terrain.GetInterpolatedHeight(GetNormalizedPosition(worldPosition));
 
         #endregion
     }
