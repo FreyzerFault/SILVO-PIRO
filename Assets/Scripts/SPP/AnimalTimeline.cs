@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using DavidUtils.ExtensionMethods;
-using SILVO.Asset_Importers;
 using SILVO.Terrain;
 using UnityEngine;
 
@@ -19,7 +18,12 @@ namespace SILVO.SPP
         public SPP_Signal[] Signals
         {
             get => _timeline.Values.ToArray();
-            set => _timeline = value.Distinct().ToDictionary(s => s.sentTime); // TODO Keys iguales
+            set
+            {
+                _timeline = value.Distinct().Where(s1 => value.Count(s2 => s2.sentTime == s1.sentTime) <= 1)
+                    .ToDictionary(s => s.sentTime);
+                UpdateSignals();
+            }
         }
 
         public Vector2[] Positions => _timeline.Values.Select(s => s.position).ToArray();
@@ -32,12 +36,7 @@ namespace SILVO.SPP
         {
             if (Signals.IsNullOrEmpty()) return;
             
-            if (_id == -1)
-                _id = Signals[0].id;
-            
-            _positionsOnTerrain = GetPositionsOnTerrainTimeline();
-            
-            UpdateCheckpointColors();
+            UpdateSignals();
         }
 
         public SPP_Signal this[int index] => Signals[index];
@@ -46,7 +45,18 @@ namespace SILVO.SPP
 
         private void OnEnable() => onCheckpointAdded += UpdateCheckpointColors;
         private void OnDisable() => onCheckpointAdded -= UpdateCheckpointColors;
-        
+
+
+        private void UpdateSignals()
+        {
+            if (_id == -1)
+                _id = Signals[0].id;
+            
+            _positionsOnTerrain = GetPositionsOnTerrainTimeline();
+            
+            Renderer.Timeline = this;
+            UpdateCheckpointColors();
+        }
 
         #region CRUD
 
@@ -82,9 +92,8 @@ namespace SILVO.SPP
         
         #region RENDERING
         
-        public void UpdateCheckpointColors() => 
-            renderer.Colors = Signals.Select(s => SPP_Signal.GetSignalColor(s.type)).ToArray();
-        
+        public void UpdateCheckpointColors() => Renderer.Colors = Signals.Select(s => SPP_Signal.GetSignalColor(s.type)).ToArray();
+
         #endregion
     }
 }

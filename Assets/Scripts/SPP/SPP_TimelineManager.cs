@@ -1,9 +1,7 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using DavidUtils;
 using DavidUtils.ExtensionMethods;
-using SILVO.Asset_Importers;
 using UnityEngine;
 
 namespace SILVO.SPP
@@ -12,6 +10,7 @@ namespace SILVO.SPP
     {
         public GameObject animalTimelinePrefab;
         
+        [SerializeField, HideInInspector]
         private SPP_Signal[] signals;
 
         public SPP_Signal[] Signals
@@ -49,9 +48,10 @@ namespace SILVO.SPP
             SignalsPerId.ForEach(pair =>
             {
                 GameObject obj = Instantiate(animalTimelinePrefab, transform);
+                obj.name = $"AnimalTimeline_{pair.Key}";
                 AnimalTimeline timeline = obj.GetComponent<AnimalTimeline>();
                 _timelines.Add(timeline);
-                timeline.Signals = pair.Value;
+                timeline.Signals = pair.Value;  
             });
         }
 
@@ -74,7 +74,7 @@ namespace SILVO.SPP
             SignalsPerId = Signals.GroupBy(s => s.id).ToDictionary(group => group.Key, group => group.ToArray());
 
 
-        private void Clear()
+        public void Clear()
         {
             UnityUtils.DestroySafe(_timelines);
             _timelines = new List<AnimalTimeline>();

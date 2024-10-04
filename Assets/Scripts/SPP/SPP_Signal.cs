@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-namespace SILVO.Asset_Importers
+namespace SILVO.SPP
 {
-    public class SPP_Signal: IComparable<SPP_Signal>
+    [Serializable]
+    public class SPP_Signal: IEquatable<SPP_Signal>
     {
         public enum SignalType
         {
@@ -25,24 +26,25 @@ namespace SILVO.Asset_Importers
         public string SignalTypeLabel => signalLabel[type];
         public string SignalTypeString => signalStr[type];
 
+        public bool EmptySignal => position == null;
 
         #region SENT TIME
 
-        public string timeStr => sentTime.ToString("HH:mm:ss");
-        public string dateStr => sentTime.ToString("dd-MM-yyyy");
-        public string fullDateStr => sentTime.ToString("dd-MM-yyyy HH:mm:ss");
+        public string TimeStr => sentTime.ToString("HH:mm:ss");
+        public string DateStr => sentTime.ToString("dd-MM-yyyy");
+        public string FullDateStr => sentTime.ToString("dd-MM-yyyy HH:mm:ss");
         
-        public int year => sentTime.Year;
-        public int month => sentTime.Month;
-        public int day => sentTime.Day;
-        public int hour => sentTime.Hour;
-        public int minute => sentTime.Minute;
-        public int second => sentTime.Second;
+        public int Year => sentTime.Year;
+        public int Month => sentTime.Month;
+        public int Day => sentTime.Day;
+        public int Hour => sentTime.Hour;
+        public int Minute => sentTime.Minute;
+        public int Second => sentTime.Second ;
         
-        public float time_h => sentTime.Hour + sentTime.Minute / 60f + sentTime.Second / 3600f + sentTime.Millisecond / 3600000f;
-        public float time_m => sentTime.Hour * 60 + sentTime.Minute + sentTime.Second / 60f + sentTime.Millisecond / 60000f;
-        public float time_s => sentTime.Hour * 3600 + sentTime.Minute * 60 + sentTime.Second + sentTime.Millisecond / 1000f;
-        public float time_ms => sentTime.Hour * 3600000 + sentTime.Minute * 60000 + sentTime.Second * 1000 + sentTime.Millisecond;
+        public float Time_H => Time_M / 60;
+        public float Time_M => Time_S / 60;
+        public float Time_S => Time_MS / 1000;
+        public float Time_MS => sentTime.Hour * 3600000 + sentTime.Minute * 60000 + sentTime.Second * 1000 + sentTime.Millisecond;
 
         #endregion
         
@@ -56,10 +58,10 @@ namespace SILVO.Asset_Importers
             this.type = type;
         }
 
-        public override string ToString() => $"[{id} - {fullDateStr}]: {SignalTypeLabel} at {position}.";
+        public override string ToString() => $"[{id} - {FullDateStr}]: {SignalTypeLabel} at {position}.";
 
         public string ToFormatedString() =>
-            $"<b>[{id}</b> <color=gray>{fullDateStr}</color>]:\t" +
+            $"<b>[{id}</b> <color=gray>{FullDateStr}</color>]:\t" +
             $"<color={signalColorStr[type]}>{SignalTypeLabel}</color> at {position}.";
 
         public static SignalType GetSignalType(string typeStr) => 
@@ -104,23 +106,43 @@ namespace SILVO.Asset_Importers
             {SignalType.Unknown, "gray"},
         };
 
-        public int CompareTo(SPP_Signal other)
+        // public int CompareTo(SPP_Signal other)
+        // {
+        //     if (ReferenceEquals(this, other)) return 0;
+        //     if (ReferenceEquals(null, other)) return 1;
+        //     int idComparison = id.CompareTo(other.id);
+        //     if (idComparison != 0) return idComparison;
+        //     
+        //     int yearComparison = Year.CompareTo(other.Year);
+        //     int monthComparison = Month.CompareTo(other.Month);
+        //     int dayComparison = Day.CompareTo(other.Day);
+        //     int timeSComparison = Time_S.CompareTo(other.Time_S);
+        //     if (yearComparison != 0) return yearComparison;
+        //     if (monthComparison != 0) return monthComparison;
+        //     if (dayComparison != 0) return dayComparison;
+        //     if (timeSComparison != 0) return timeSComparison;
+        //     
+        //     return 0;
+        // }
+
+        public bool Equals(SPP_Signal other)
         {
-            if (ReferenceEquals(this, other)) return 0;
-            if (ReferenceEquals(null, other)) return 1;
-            int idComparison = id.CompareTo(other.id);
-            if (idComparison != 0) return idComparison;
-            
-            int yearComparison = year.CompareTo(other.year);
-            int monthComparison = month.CompareTo(other.month);
-            int dayComparison = day.CompareTo(other.day);
-            int timeSComparison = time_s.CompareTo(other.time_s);
-            if (yearComparison != 0) return yearComparison;
-            if (monthComparison != 0) return monthComparison;
-            if (dayComparison != 0) return dayComparison;
-            if (timeSComparison != 0) return timeSComparison;
-            
-            return 0;
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return id == other.id && sentTime.Equals(other.sentTime);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((SPP_Signal)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(id, sentTime);
         }
     }
 }

@@ -2,11 +2,10 @@ using System.Linq;
 using DavidUtils.Rendering;
 using DavidUtils.Rendering.Extensions;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace SILVO.SPP
 {
-    [RequireComponent(typeof(LineRenderer))]
+    [RequireComponent(typeof(LineRenderer)), ExecuteAlways]
     public class TimelineRenderer: PointsRenderer
     {
         [SerializeField] protected Timeline timeline;
@@ -47,7 +46,7 @@ namespace SILVO.SPP
         private void Start() => UpdateTimeline();
 
         
-        private void UpdateTimeline()
+        public void UpdateTimeline()
         {
             UpdateLineRenderer();
             UpdateCheckPoints();

@@ -1,30 +1,41 @@
 using System;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using Csv;
 using UnityEngine;
+using DavidUtils.ExtensionMethods;
 
-namespace SILVO.Asset_Importers
+namespace SILVO.SPP
 {
+    [Serializable]
     public class SPP_CSV
     {
         private static string separator = ",";
         private static string[] headers = { "time", "device_id", "msg_type", "position_time", "lat", "lon" };
+        private static string[] headerLabels = { "Received", "ID", "Type", "Sent", "Lat", "Lon" };
 
         public string filePath;
 
-        private readonly ICsvLine[] _csvLines;
-        public SPP_Signal[] signals;
+        [SerializeField] public readonly ICsvLine[] csvLines;
+        [SerializeField] public SPP_Signal[] signals;
+        [SerializeField] public ICsvLine[] invalidLines;
         
-        public bool IsEmpty => signals.Length == 0;
+        public bool IsEmpty => signals == null || signals.Length == 0;
 
         public SPP_CSV(string csvPath)
         {
             filePath = csvPath;
 
-            _csvLines = CsvReader.ReadFromText(ReadTextFile(filePath)).ToArray();
-            signals = _csvLines.Select(ToSignal).Where(s => s != null).ToArray();
+            csvLines = CsvReader.ReadFromText(ReadTextFile(filePath)).ToArray();
+
+            (SPP_Signal, int)[] parsedSignals = csvLines.Select((line,i) => (ToSignal(line), i)).ToArray();
+            
+            signals = parsedSignals.Where((s) => s.Item1 != null).Select(s => s.Item1).ToArray();
+            invalidLines = parsedSignals.Where(s => s.Item1 == null).Select(s => csvLines[s.Item2]).ToArray();
+
+            UpdateInvalidLog();
+            
+            // DebugInvalidLog();
         }
 
         private static SPP_Signal ToSignal(ICsvLine line)
@@ -32,9 +43,10 @@ namespace SILVO.Asset_Importers
             if (!headers.All(line.HasColumn))
                 Debug.LogError($"CSV line does not contain all required headers: [{string.Join(", ", headers)}]");;
             
+            var values = headers.Select(h => line[h]).ToArray();
+            
             bool badId = !int.TryParse(line["device_id"], out int id);
             
-            var culture = CultureInfo.CreateSpecificCulture("es-ES");
             bool badReceivedDate = !DateTime.TryParse(line["time"], out DateTime receivedTime);
             bool badSentDate = !DateTime.TryParse(line["position_time"], out DateTime sentTime);
             
@@ -44,6 +56,12 @@ namespace SILVO.Asset_Importers
             Vector2 position = badPosition ? Vector2.zero : new Vector2(lon, lat);
             
             SPP_Signal.SignalType type = SPP_Signal.GetSignalType(line["msg_type"]);
+
+            if (line["position_time"] == "")
+            {
+                // Debug.LogWarning($"Empty Seq signal: {line}");
+                return null;
+            }
 
             if (!badId && !badReceivedDate && !badSentDate && !badPosition)
                 return new SPP_Signal(id, receivedTime, sentTime, position, type);
@@ -61,7 +79,7 @@ namespace SILVO.Asset_Importers
         
         public SPP_Signal this[int index] => signals[index];
         
-        private ICsvLine GetCsvLine(int index) => _csvLines[index];
+        private ICsvLine GetCsvLine(int index) => csvLines[index];
         private string GetCsvValue(int index, string header) => GetCsvLine(index)[header];
 
         private static string ReadTextFile(string path)
@@ -76,5 +94,57 @@ namespace SILVO.Asset_Importers
                 return "";
             }
         }
+
+        
+        #region LOG INFO
+
+        public string headerLog;
+        public string[] invalidLogs;
+
+        public string[] GetInvalidLogs()
+        {
+            var invalidMsgs = invalidLines.Select(GetInvalidLog);
+            return invalidMsgs.ToArray();
+        }
+
+        // static int MAX_COL_CHARS = 15;
+        static int[] MAX_COL_CHARS = {20, 6, 10, 20, 10, 10};
+        static int MAX_ROWS = 10;
+        private string GetInvalidLog(ICsvLine line)
+        {
+            bool badId = !int.TryParse(line["device_id"], out int id);
+
+            bool badReceivedDate = !DateTime.TryParse(line["time"], out DateTime receivedTime);
+            bool badSentDate = !DateTime.TryParse(line["position_time"], out DateTime sentTime);
+
+            bool badPosition = !float.TryParse(line["lon"], out float lon);
+            badPosition = !float.TryParse(line["lat"], out float lat) || badPosition;
+                
+            SPP_Signal.SignalType type = SPP_Signal.GetSignalType(line["msg_type"]);
+                
+            string badColor = "#ff4f4c", goodColor = "gray";
+                
+            var badFlags = new[] {badReceivedDate, badId, false, badSentDate, badPosition, badPosition};
+
+            var values = line.Values
+                .Select((v,i) => (badFlags[i] ? "NULL" : v).TruncateFixedSize(MAX_COL_CHARS[i]).Colored(badFlags[i] ? badColor : goodColor));
+
+            return string.Join(" | ", values);
+        }
+
+        private void UpdateInvalidLog()
+        {
+            headerLog = string.Join(" | ", headerLabels.Select((h,i) => h.TruncateFixedSize(MAX_COL_CHARS[i])));
+            invalidLogs = GetInvalidLogs();
+        }
+
+        private void DebugInvalidLog() =>
+            Debug.LogWarning($"{invalidLines.Length} INVALID LINES FOUND:\n".Colored("yellow") +
+                             $"{headerLog}\n" +
+                             string.Join("\n", invalidLogs.Take(MAX_ROWS)));
+
+        #endregion
+        
+        
     }
 }

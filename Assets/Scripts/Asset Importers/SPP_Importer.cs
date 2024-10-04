@@ -1,5 +1,4 @@
 using System.Linq;
-using System.Security.Cryptography;
 using SILVO.SPP;
 using UnityEditor.AssetImporters;
 using UnityEngine;
@@ -26,22 +25,23 @@ namespace SILVO.Asset_Importers
     [ScriptedImporter(1, "spp")]
     public class SPP_Importer : ScriptedImporter
     {
+        [SerializeField]
+        public SPP_CSV csv;
+        
         public override void OnImportAsset(AssetImportContext ctx)
         {
             string path = ctx.assetPath;
             
-            var sppCsv = new SPP_CSV(path);
+            csv = new SPP_CSV(path);
             
-            if (sppCsv.IsEmpty)
+            if (csv.IsEmpty)
             {
                 Debug.LogError($"CSV file has no SPP Data: {path}");
                 return;
             }
             
-            SPP_Signal[] signals = sppCsv.signals;
+            SPP_Signal[] signals = csv.signals;
             signals = signals.Distinct().OrderBy(s => s.sentTime).ToArray();
-
-            Debug.Log(string.Join(",", signals.Where(s => s.sentTime.ToString("MM/dd/yyyy hh:mm:ss") == "08/05/2024 08:41:38")));
             
             GameObject obj = new GameObject("SPP_Timeline");
             SPP_TimelineManager timelineManager = obj.AddComponent<SPP_TimelineManager>();
@@ -49,6 +49,8 @@ namespace SILVO.Asset_Importers
             timelineManager.Signals = signals;
             
             ctx.AddObjectToAsset("Timeline Manager", obj);
+            timelineManager.Timelines.ForEach(timeline => ctx.AddObjectToAsset(timeline.name, timeline.gameObject));
+            
             ctx.SetMainObject(obj);
         }
     }

@@ -1,5 +1,4 @@
 using System;
-using NetTopologySuite.GeometriesGraph;
 using UnityEngine;
 
 namespace SILVO.SPP
@@ -13,7 +12,9 @@ namespace SILVO.SPP
         public int PointCount => Checkpoints.Length;
         public bool IsEmpty => PointCount == 0;
         
-        public TimelineRenderer renderer;
+        private TimelineRenderer renderer;
+
+        public TimelineRenderer Renderer => renderer ??= GetComponent<TimelineRenderer>();
         
         protected virtual void Awake() => renderer = GetComponent<TimelineRenderer>();
     }
