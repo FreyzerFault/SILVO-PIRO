@@ -1,4 +1,5 @@
 using System.Linq;
+using Csv;
 using DavidUtils.ExtensionMethods;
 using SILVO.Asset_Importers;
 using SILVO.SPP;
@@ -12,8 +13,9 @@ namespace SILVO.Editor
     public class SPP_ImporterEditor: ScriptedImporterEditor
     {
         private GUIStyle monoStyle;
-        bool invalidFoldout = true;
+        bool showInvalidRows = false;
         int maxInvalidLinesShown = 10;
+        int maxCsvLinesShown = 10;
 
         protected override void Awake()
         {
@@ -33,10 +35,9 @@ namespace SILVO.Editor
             SPP_CSV csv = importer.csv;
             if (csv == null || csv.IsEmpty)
             {
-                EditorGUILayout.LabelField($"No CSV {(csv.IsEmpty ? "data in file" : "created")}. Try to Reimport this.", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField($"No CSV {(csv!.IsEmpty ? "data in file" : "created")}. Try to Reimport this.", EditorStyles.boldLabel);
                 return;
             }
-
             
             EditorGUILayout.Separator();
             
@@ -47,9 +48,6 @@ namespace SILVO.Editor
             EditorGUILayout.Separator();
             EditorGUILayout.Separator();
             
-            // SETTINGS
-            SettingsGUI();
-
             serializedObject.ApplyModifiedProperties();
             
             ApplyRevertGUI();
@@ -57,42 +55,54 @@ namespace SILVO.Editor
 
         private void InfoGUI(SPP_CSV csv)
         {
-            var invalidLines = csv.invalidLogs;
-            var invalidCount = invalidLines.Length;
             
             EditorGUILayout.BeginVertical();
             
-            EditorGUILayout.LabelField($"{csv.signals.Length} Valid Signals", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField($"{csv.csvLines.Count} Rows of Data", EditorStyles.boldLabel);
+
+            maxCsvLinesShown = ExpandableList(csv.csvLines.ToArray(), maxCsvLinesShown);
             
-            EditorGUILayout.Separator();
-            
-            
-            invalidFoldout = EditorGUILayout.Foldout(invalidFoldout, $"{invalidCount} Invalid Rows:", true);
-            
-            
-            if (invalidFoldout)
+            if (!showInvalidRows)
+                showInvalidRows = GUILayout.Button("Analise for Invalid Rows");
+            else
             {
-                EditorGUILayout.BeginHorizontal(new GUIStyle() {alignment = TextAnchor.MiddleLeft}, GUILayout.ExpandWidth(false), GUILayout.MinWidth(0));
-                {
-                    if (GUILayout.Button("-", GUILayout.MaxWidth(20))) maxInvalidLinesShown -= 10;
-                    if (GUILayout.Button("+", GUILayout.MaxWidth(20))) maxInvalidLinesShown += 10;
-                    EditorGUILayout.LabelField($"{maxInvalidLinesShown} / {invalidCount}", GUILayout.ExpandWidth(false), GUILayout.MinWidth(0));
-                    
-                    maxInvalidLinesShown = Mathf.Clamp(maxInvalidLinesShown, 0, invalidCount);
-                }
-                EditorGUILayout.EndHorizontal();
+                csv.ParseSignals();
                 
+                var invalidLines = csv.invalidLogs;
+                var invalidCount = invalidLines.Count;
+
+                EditorGUILayout.LabelField($"{csv.signals.Count} Valid Signals", EditorStyles.boldLabel);
+
                 EditorGUILayout.Separator();
                 
-                csv.invalidLogs.Take(maxInvalidLinesShown).ForEach(line => EditorGUILayout.LabelField($"{line}", monoStyle));
+                EditorGUILayout.LabelField($"{invalidCount} Invalid Rows:");
+
+                maxInvalidLinesShown = ExpandableList<string>(invalidLines.ToArray(), maxInvalidLinesShown);
             }
 
             EditorGUILayout.EndVertical();
         }
 
-        private void SettingsGUI()
+        private int ExpandableList<T>(T[] list, int numVisible)
         {
             
+            EditorGUILayout.BeginHorizontal(new GUIStyle() { alignment = TextAnchor.MiddleLeft },
+                GUILayout.ExpandWidth(false), GUILayout.MinWidth(0));
+            {
+                if (GUILayout.Button("-", GUILayout.MaxWidth(20))) numVisible -= 10;
+                if (GUILayout.Button("+", GUILayout.MaxWidth(20))) numVisible += 10;
+                EditorGUILayout.LabelField($"{numVisible} / {list.Length}",
+                    GUILayout.ExpandWidth(false), GUILayout.MinWidth(0));
+
+                numVisible = Mathf.Clamp(numVisible, 0, list.Length);
+            }
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.Separator();
+
+            list.Take(numVisible).ForEach(line => EditorGUILayout.LabelField($"{line}", monoStyle));
+
+            return numVisible;
         }
     }
 }

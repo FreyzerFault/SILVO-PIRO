@@ -1,7 +1,13 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using Csv;
+using DavidUtils.ExtensionMethods;
 using SILVO.SPP;
 using UnityEditor.AssetImporters;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace SILVO.Asset_Importers
 {
@@ -25,6 +31,8 @@ namespace SILVO.Asset_Importers
     [ScriptedImporter(1, "spp")]
     public class SPP_Importer : ScriptedImporter
     {
+        private bool parseOnImport = false;
+        
         [SerializeField]
         public SPP_CSV csv;
         
@@ -34,23 +42,19 @@ namespace SILVO.Asset_Importers
             
             csv = new SPP_CSV(path);
             
-            if (csv.IsEmpty)
+            GameObject obj = new GameObject();
+            var timelineManager = obj.AddComponent<SPP_TimelineManager>();
+            timelineManager.animalTimelinePrefab = Resources.Load<GameObject>("Prefabs/AnimalTimeline");
+            timelineManager.csv = csv;
+            
+            if (parseOnImport)
             {
-                Debug.LogError($"CSV file has no SPP Data: {path}");
-                return;
+                timelineManager.ParseCSVFile();
+                timelineManager.Timelines.ForEach(timeline => ctx.AddObjectToAsset(timeline.name, timeline.gameObject));
             }
             
-            SPP_Signal[] signals = csv.signals;
-            signals = signals.Distinct().OrderBy(s => s.sentTime).ToArray();
-            
-            GameObject obj = new GameObject("SPP_Timeline");
-            SPP_TimelineManager timelineManager = obj.AddComponent<SPP_TimelineManager>();
-            timelineManager.animalTimelinePrefab = Resources.Load<GameObject>("Prefabs/AnimalTimeline");
-            timelineManager.Signals = signals;
-            
-            ctx.AddObjectToAsset("Timeline Manager", obj);
-            timelineManager.Timelines.ForEach(timeline => ctx.AddObjectToAsset(timeline.name, timeline.gameObject));
-            
+            ctx.AddObjectToAsset("Timeline Manager Object", obj);
+            ctx.AddObjectToAsset("Timeline Manager", timelineManager);
             ctx.SetMainObject(obj);
         }
     }

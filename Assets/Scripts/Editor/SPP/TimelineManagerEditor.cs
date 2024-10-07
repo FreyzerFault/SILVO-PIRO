@@ -15,6 +15,23 @@ namespace SILVO.Editor.SPP
             var timelineManager = (SPP_TimelineManager) target;
             if (timelineManager == null) return;
             
+            EditorGUILayout.Separator();
+            
+            if (timelineManager.Signals.IsNullOrEmpty() && GUILayout.Button("Load Timelines"))
+                timelineManager.ParseCSVFile();
+            
+            if (timelineManager.Signals.NotNullOrEmpty())
+            {
+                int validSignals = timelineManager.Signals.Length;
+                int invalidSignals = timelineManager.csv.invalidLines.Count;
+                int totalSignals = timelineManager.csv.csvLines.Count;
+                EditorGUILayout.LabelField(validSignals + invalidSignals < totalSignals
+                    ? $"Loading {validSignals + invalidSignals} / {totalSignals} signals..."
+                    : $"Loaded {validSignals} signals and {invalidSignals} invalid signals.");
+            }
+            
+            EditorGUILayout.Separator();
+            
             if (GUILayout.Button("Clear Timelines")) timelineManager.Clear();
         }
     }

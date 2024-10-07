@@ -1,5 +1,8 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Csv;
 using DavidUtils;
 using DavidUtils.ExtensionMethods;
 using UnityEngine;
@@ -9,7 +12,50 @@ namespace SILVO.SPP
     public class SPP_TimelineManager: MonoBehaviour
     {
         public GameObject animalTimelinePrefab;
+
+        private void Awake()
+        {
+            _timelines = GetComponentsInChildren<AnimalTimeline>().ToList();
+            UpdateSignals();
+        }
+
+
+        #region CSV FILE
+
+        [SerializeField, HideInInspector]
+        public SPP_CSV csv;
         
+        public void ParseCSVFile()
+        {
+            // Signals = csv.ParseSignals();
+            StartCoroutine(ParseCSVFileCoroutine());
+        }
+        
+        int batchSize = 10;
+        public IEnumerator ParseCSVFileCoroutine()
+        {
+            (SPP_Signal, SPP_CsvLine)[] batchResults = Array.Empty<(SPP_Signal, SPP_CsvLine)>();
+            for (var i = 0; i < csv.csvLines.Count; i += batchSize)
+            {
+                batchResults = csv.csvLines.Skip(i).Take(batchSize).Select((line) => csv.ParseLine(line)).ToArray();
+                Signals = csv.signals.ToArray();
+                yield return null;
+            }
+            
+            yield return null;
+            
+            // Dividimos las lineas entre validas (no nulas) e invalidas (Lineas originales de las nulas)
+            csv.signals = batchResults.Where((pair) => pair.Item1 != null).Select(pair => pair.Item1).ToList();
+            csv.invalidLines = batchResults.Where(pair => pair.Item1 == null).Select(pair => pair.Item2).ToList();
+            
+            csv.UpdateInvalidLog();
+        }
+
+        #endregion
+        
+        
+        #region SIGNALS
+
         [SerializeField, HideInInspector]
         private SPP_Signal[] signals;
 
@@ -24,6 +70,37 @@ namespace SILVO.SPP
         }
         public Dictionary<int, SPP_Signal[]> SignalsPerId { get; private set; } = new(); 
         
+        private void UpdateSignals()
+        {
+            if (signals.IsNullOrEmpty()) Clear();
+            
+            RemoveDuplicates();
+            OrderByTime();
+            UpdateSignalsPerId();
+            
+            if (SignalsPerId.Count != _timelines.Count)
+            {
+                Clear();
+                InstantiateAnimalTimelines();
+            }
+            else
+                _timelines.ForEach(tl => tl.Signals = SignalsPerId[tl.ID]);
+        }
+        
+        private void RemoveDuplicates() => 
+            signals = signals.Distinct().ToArray();
+        
+        private void OrderByTime() => 
+            signals = signals.OrderBy(s => s.sentTime).ToArray();
+
+        private void UpdateSignalsPerId() => 
+            SignalsPerId = Signals.GroupBy(s => s.id).ToDictionary(group => group.Key, group => group.ToArray());
+
+        #endregion
+
+        
+        #region TIMELINES
+
         private List<AnimalTimeline> _timelines = new();
         public List<AnimalTimeline> Timelines
         {
@@ -36,13 +113,7 @@ namespace SILVO.SPP
         }
 
         public int TimelineCount => _timelines.Count;
-
-        private void Awake()
-        {
-            _timelines = GetComponentsInChildren<AnimalTimeline>().ToList();
-            UpdateSignals();
-        }
-
+        
         private void InstantiateAnimalTimelines()
         {
             SignalsPerId.ForEach(pair =>
@@ -54,30 +125,13 @@ namespace SILVO.SPP
                 timeline.Signals = pair.Value;  
             });
         }
-
-
-        private void UpdateSignals()
-        {
-            if (signals.IsNullOrEmpty()) Clear();
-            
-            UpdateSignalsPerId();
-            if (SignalsPerId.Count != _timelines.Count)
-            {
-                Clear();
-                InstantiateAnimalTimelines();
-            }
-            else
-                _timelines.ForEach(tl => tl.Signals = SignalsPerId[tl.ID]);
-        }
-
-        private void UpdateSignalsPerId() => 
-            SignalsPerId = Signals.GroupBy(s => s.id).ToDictionary(group => group.Key, group => group.ToArray());
-
-
+        
         public void Clear()
         {
             UnityUtils.DestroySafe(_timelines);
             _timelines = new List<AnimalTimeline>();
         }
+
+        #endregion
     }
 }
