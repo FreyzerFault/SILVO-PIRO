@@ -55,6 +55,7 @@ namespace SILVO.SPP
 
         #region LINE
 
+        [SerializeField]
         private LineRenderer _lr;
         [HideInInspector] public Color lineColor = Color.white;
         

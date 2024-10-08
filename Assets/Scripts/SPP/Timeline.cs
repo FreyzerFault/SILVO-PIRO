@@ -17,5 +17,7 @@ namespace SILVO.SPP
         public TimelineRenderer Renderer => renderer ??= GetComponent<TimelineRenderer>();
         
         protected virtual void Awake() => renderer = GetComponent<TimelineRenderer>();
+
+        public abstract void UpdateCheckpoints();
     }
 }

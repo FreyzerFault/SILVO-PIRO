@@ -9,6 +9,7 @@ namespace SILVO.SPP
 {
     public class AnimalTimeline : Timeline
     {
+        [SerializeField]
         private int _id = -1;
         public int ID => _id;
 
@@ -20,15 +21,16 @@ namespace SILVO.SPP
             get => _timeline.Values.ToArray();
             set
             {
-                _timeline = value.Distinct().Where(s1 => value.Count(s2 => s2.sentTime == s1.sentTime) <= 1)
-                    .ToDictionary(s => s.sentTime);
-                UpdateSignals();
+                _timeline = value.Where(s1 => value.Count(s1.Equals) == 1).ToDictionary(s => s.SentDateTime);
+                Debug.Log($"Signals Updated in id {_id}: {value.Length} to " + Signals.Length);
+                UpdateCheckpoints();
             }
         }
 
         public Vector2[] Positions => _timeline.Values.Select(s => s.position).ToArray();
         public SPP_Signal.SignalType[] Messages => _timeline.Values.Select(s => s.type).ToArray();
         
+     
         private Dictionary<DateTime, Vector3> _positionsOnTerrain = new();
         public override Vector3[] Checkpoints => _positionsOnTerrain.Values.ToArray();
 
@@ -36,7 +38,7 @@ namespace SILVO.SPP
         {
             if (Signals.IsNullOrEmpty()) return;
             
-            UpdateSignals();
+            UpdateCheckpoints();
         }
 
         public SPP_Signal this[int index] => Signals[index];
@@ -46,8 +48,7 @@ namespace SILVO.SPP
         private void OnEnable() => onCheckpointAdded += UpdateCheckpointColors;
         private void OnDisable() => onCheckpointAdded -= UpdateCheckpointColors;
 
-
-        private void UpdateSignals()
+        public override void UpdateCheckpoints()
         {
             if (_id == -1)
                 _id = Signals[0].id;
@@ -62,8 +63,8 @@ namespace SILVO.SPP
 
         public void AddSignal(SPP_Signal signal)
         {
-            _timeline[signal.sentTime] = signal;
-            _positionsOnTerrain[signal.sentTime] = GetPositionOnTerrain(signal.position);
+            _timeline[signal.SentDateTime] = signal;
+            _positionsOnTerrain[signal.SentDateTime] = GetPositionOnTerrain(signal.position);
             onCheckpointAdded?.Invoke();
         }
 
@@ -93,6 +94,14 @@ namespace SILVO.SPP
         #region RENDERING
         
         public void UpdateCheckpointColors() => Renderer.Colors = Signals.Select(s => SPP_Signal.GetSignalColor(s.type)).ToArray();
+
+        #endregion
+
+
+        #region LOG
+
+        public string[] GetSignalsLog() => Signals.Select(s =>
+            $"[{s.SignalTypeLabel}] on {s.position} | SENT: {s.SentDateTime} - RECEIVED: {s.ReceivedDateTime}").ToArray();
 
         #endregion
     }

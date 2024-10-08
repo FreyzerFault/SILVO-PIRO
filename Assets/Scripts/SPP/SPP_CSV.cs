@@ -1,11 +1,13 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using Csv;
 using UnityEngine;
 using DavidUtils.ExtensionMethods;
+using UnityEngine.Serialization;
 
 namespace SILVO.SPP
 {
@@ -13,40 +15,102 @@ namespace SILVO.SPP
     public class SPP_CsvLine : ICsvLine
     {
         private static string[] _headers = { "time", "device_id", "msg_type", "position_time", "lat", "lon" };
-        public static string[] headerLabels = { "Received", "ID", "Type", "Sent", "Lat", "Lon" };
         
         public bool HasColumn(string name) => _headers.Contains(name);
 
+        [SerializeField] public int index;
+        [SerializeField] public string raw;
+        [SerializeField] public string[] values;
+        
         public string[] Headers => _headers;
         public int ColumnCount => Headers.Length;
-        
-        [SerializeField]
-        public string[] Values { get; }
-        [SerializeField]public string Raw { get; }
-        [SerializeField]public int Index { get; }
+        public string[] Values => values;
+
+        public string Raw => raw;
+        public int Index => index;
 
         public string this[string name] => HasColumn(name) ? this[Headers.IndexOf(name)] : "NULL";
-        public string this[int index] => index < Values.Length ? Values[index] : "NULL";
+        public string this[int index] => index < values.Length ? values[index] : "NULL";
         
-        public bool IsValid => Index >= 0 && Values.Length == ColumnCount;
+        public bool IsValid => Index >= 0 && values.Length == ColumnCount;
         
         public SPP_CsvLine() : this("", -1) {}
 
-        public SPP_CsvLine(ICsvLine line) : this(line.Raw, line.Index)
-        {
-            
-        }
+        public SPP_CsvLine(ICsvLine line) : this(line.Raw, line.Index){ }
+        
         public SPP_CsvLine(string raw, int index, string separator = ",")
         {
-            Raw = raw;
-            Index = index;
-            Values = raw.Split(separator);
+            this.raw = raw;
+            this.index = index;
+            values = raw.Split(separator);
+        }
+
+        #region PARSE
+        
+        /// <summary>
+        /// Parse CSV Line to SPP Signal
+        /// Null si hay una columna invalida
+        /// </summary>
+        public SPP_Signal TryParse(out bool[] badFlags)
+        {
+            badFlags = new bool[ColumnCount];
+            Array.Fill(badFlags, false);
+            
+            // Debe tener todas las columnas
+            if (!IsValid) Debug.LogError($"CSV line is not valid: {this}");
+            
+            // RECEIVED TIME
+            badFlags[0] = !DateTime.TryParse(this["time"], out DateTime receivedTime);
+            
+            // ID
+            badFlags[1] = !int.TryParse(this["device_id"], out int id);
+            
+            // TYPE
+            SPP_Signal.SignalType type = SPP_Signal.GetSignalType(this["msg_type"]);
+            badFlags[2] = type == SPP_Signal.SignalType.Unknown;
+            
+            // SENT TIME
+            badFlags[3] = !DateTime.TryParse(this["position_time"], out DateTime sentTime);
+            
+            // POSITION
+            badFlags[4] = !float.TryParse(this["lon"], NumberStyles.Float, new CultureInfo( "en-US"), out float lon);
+            badFlags[5] = !float.TryParse(this["lat"], NumberStyles.Float, new CultureInfo( "en-US"), out float lat);
+            Vector2 position = new Vector2(badFlags[4] ? 0 : lon, badFlags[5] ? 0 : lat);
+            
+            // No sent time => EMPTY Signal. No unexpected error
+            if (this["position_time"] == "") return null;
+
+            // Something wrong besides the sent time => Unexpected error!!
+            if (badFlags.Any(b => b))
+            {
+                var errMsg = "";
+                for (var i = 0; i < ColumnCount; i++)
+                    if (badFlags[i])
+                        errMsg += $"{headerLabels[i]} is invalid: {values[i]}\n";
+
+                Debug.LogWarning($"Failed to parse CSV line: {this}\n" +
+                                 $"{errMsg}");
+                return null;
+            }
+            
+            // All GOOD => Create Signal
+            return new SPP_Signal(id, receivedTime, sentTime, position, type);
         }
         
+        #endregion
+        
+        
+        
+        #region LABELS
+
+        public static string[] headerLabels = { "Received", "ID", "Type", "Sent", "Lat", "Lon" };
         
         public string GetLabel(int index) => headerLabels[index];
         public string GetLabel(string name) => GetLabel(_headers.IndexOf(name));
 
+        #endregion
+        
+        
         public override string ToString() => Raw;
     }
     
@@ -57,8 +121,10 @@ namespace SILVO.SPP
 
         [HideInInspector, SerializeField] public List<string> lines; 
         [HideInInspector, SerializeField] public List<SPP_CsvLine> csvLines;
-        [HideInInspector, SerializeField] public List<SPP_Signal> signals = new();
+        [HideInInspector, SerializeField] public List<SPP_CsvLine> validLines = new();
         [HideInInspector, SerializeField] public List<SPP_CsvLine> invalidLines = new();
+        
+        [HideInInspector, SerializeField] public List<SPP_Signal> signals = new();
 
         public bool IsEmpty => lines.IsNullOrEmpty();
 
@@ -66,83 +132,40 @@ namespace SILVO.SPP
         {
             filePath = csvPath;
 
-            csvLines = CsvReader.ReadFromText(ReadTextFile(filePath)).Select(line =>
-            {
-                Debug.Log($"Creating CSV Line: {line}\n" +
-                          $"Raw: {line.Raw}\n" +
-                          $"Values: {string.Join(",", line.Values)}");
-                return new SPP_CsvLine(line.Raw, line.Index);
-            }).ToList();
+            csvLines = CsvReader
+                .ReadFromText(ReadTextFile(filePath))
+                .Select(line => new SPP_CsvLine(line.Raw, line.Index)).ToList();
             lines = csvLines.Select(l => l.ToString()).ToList();
         }
         
-        public SPP_Signal[] ParseSignals()
+        public SPP_Signal this[int index] => signals[index];
+        
+        
+        public SPP_Signal[] ParseAllSignals()
         {
-            (SPP_Signal, int)[] parsedSignals = csvLines.Select((line,i) => (TryParseToSignal(line), i)).ToArray();
+            (SPP_Signal, SPP_CsvLine)[] parsedSignals = csvLines.Select((line) => (line.TryParse(out _), line)).ToArray();
             
-            // Dividimos las lineas entre validas (no nulas) e invalidas (Lineas originales de las nulas)
+            // Dividimos las lineas entre nulas y no nulas. Las no nulas son signals validas
+            validLines = parsedSignals.Where(s => s.Item1 != null).Select(s => s.Item2).ToList();
+            invalidLines = parsedSignals.Where(s => s.Item1 == null).Select(s => s.Item2).ToList();
+            
             signals = parsedSignals.Where((s) => s.Item1 != null).Select(s => s.Item1).ToList();
-            invalidLines = parsedSignals.Where(s => s.Item1 == null).Select(s => csvLines[s.Item2]).ToList();
             
-            UpdateInvalidLog();
+            UpdateLog();
             // DebugInvalidLog();
             return signals.ToArray();
         }
-
-        /// <summary>
-        /// Parse CSV Line to SPP Signal
-        /// Null si hay una columna invalida
-        /// </summary>
-        public static SPP_Signal TryParseToSignal(SPP_CsvLine line)
-        {
-            // Debe tener todas las columnas
-            if (!line.IsValid)
-                Debug.LogError($"CSV line is not valid");
-            
-            // ID
-            bool badId = !int.TryParse(line["device_id"], out int id);
-            
-            // DATEs
-            bool badReceivedDate = !DateTime.TryParse(line["time"], out DateTime receivedTime);
-            bool badSentDate = !DateTime.TryParse(line["position_time"], out DateTime sentTime);
-            
-            // POSITION
-            bool badPosition = !float.TryParse(line["lon"], out float lon);
-            badPosition = !float.TryParse(line["lat"], out float lat) || badPosition;
-            Vector2 position = badPosition ? Vector2.zero : new Vector2(lon, lat);
-
-            // TYPE
-            SPP_Signal.SignalType type = SPP_Signal.GetSignalType(line["msg_type"]);
-
-            // No sent time => Invalid Signal. No unexpected error
-            if (line["position_time"] == "") return null;
-
-            // All GOOD => Create Signal
-            if (!badId && !badReceivedDate && !badSentDate && !badPosition)
-                return new SPP_Signal(id, receivedTime, sentTime, position, type);
-
-            // Something wrong besides the sent time => Unexpected error!!
-            var errMsg = "";
-            if (badId) errMsg += $"ID is invalid: {line["device_id"]}\n";
-            if (badReceivedDate) errMsg += $"Received Date is invalid: {line["time"]}\n";
-            if (badSentDate) errMsg += $"Sent Date is invalid: {line["position_time"]}\n";
-            if (badPosition) errMsg += $"Position is invalid: {line["lon"]}, {line["lat"]}\n";
-            
-            Debug.LogWarning($"Failed to parse CSV line: {line}\n" +
-                           $"{errMsg}");
-            return null;
-        }
         
-        public SPP_Signal this[int index] => signals[index];
 
         private void SortSignals()
         {
             signals.Sort((a,b) =>
             {
                 int idComparison = a.id.CompareTo(b.id);
-                return idComparison == 0 ? a.sentTime.CompareTo(b.sentTime) : idComparison;
+                return idComparison == 0 ? a.SentDateTime.CompareTo(b.SentDateTime) : idComparison;
             });
         }
+        
         
         #region CSV
 
@@ -167,50 +190,45 @@ namespace SILVO.SPP
         
         #region LOG INFO
 
-        [HideInInspector] public string headerLog;
-        [HideInInspector, SerializeField] public List<string> invalidLogs = new();
-
-        public string[] GetInvalidLogs()
-        {
-            var invalidMsgs = invalidLines.Select(GetInvalidLog);
-            return invalidMsgs.ToArray();
-        }
-
         // static int MAX_COL_CHARS = 15;
         static int[] MAX_COL_CHARS = {20, 6, 10, 20, 10, 10};
         static int MAX_ROWS = 10;
-        private string GetInvalidLog(SPP_CsvLine line)
+        
+        [HideInInspector] public string headerLog;
+        [HideInInspector, SerializeField] public List<string> allLog = new();
+        [HideInInspector, SerializeField] public List<string> validLogs = new();
+        [HideInInspector, SerializeField] public List<string> invalidLogs = new();
+
+        public void UpdateLog()
         {
-            bool badId = !int.TryParse(line["device_id"], out int _);
-
-            bool badReceivedDate = !DateTime.TryParse(line["time"], out DateTime _);
-            bool badSentDate = !DateTime.TryParse(line["position_time"], out DateTime _);
-
-            bool badPosition = !float.TryParse(line["lon"], out float _);
-            badPosition = !float.TryParse(line["lat"], out float _) || badPosition;
-                
-            SPP_Signal.SignalType type = SPP_Signal.GetSignalType(line["msg_type"]);
-                
-            string badColor = "#ff4f4c", goodColor = "gray";
-                
-            var badFlags = new[] {badReceivedDate, badId, false, badSentDate, badPosition, badPosition};
-
-            var values = line.Values
-                .Select((v,i) => (badFlags[i] ? "NULL" : v).TruncateFixedSize(MAX_COL_CHARS[i]).Colored(badFlags[i] ? badColor : goodColor));
-
-            return string.Join(" | ", values);
-        }
-
-        public void UpdateInvalidLog()
-        {
-            headerLog = string.Join(" | ", SPP_CsvLine.headerLabels.Select((h,i) => h.TruncateFixedSize(MAX_COL_CHARS[i])));
-            invalidLogs = GetInvalidLogs().ToList();
+            headerLog = string.Join(" | ", SPP_CsvLine.headerLabels.Select((h,i) => h.TruncateFixedSize(MAX_COL_CHARS[i]))).Colored("cyan");
+            allLog = csvLines.Select(GetInvalidLog).ToList();
+            validLogs = validLines.Select(GetLog).ToList();
+            invalidLogs = invalidLines.Select(GetInvalidLog).ToList();
         }
 
         private void DebugInvalidLog() =>
             Debug.LogWarning($"{invalidLines.Count} INVALID LINES FOUND:\n".Colored("yellow") +
                              $"{headerLog}\n" +
                              string.Join("\n", invalidLogs.Take(MAX_ROWS)));
+
+
+        public string[] GetInvalidLogs() => invalidLines.Select(GetInvalidLog).ToArray();
+
+        public string GetLog(SPP_CsvLine line) =>
+            string.Join(" | ", line.values.Select((v, i) => $"<color=white>{v.TruncateFixedSize(MAX_COL_CHARS[i])}</color>"));
+
+        private string GetInvalidLog(SPP_CsvLine line)
+        {
+            line.TryParse(out bool[] badFlags);
+                
+            string badColor = "#ff4f4c", goodColor = "gray";
+
+            var values = line.values
+                .Select((v,i) => (badFlags[i] ? "NULL" : v).TruncateFixedSize(MAX_COL_CHARS[i]).Colored(badFlags[i] ? badColor : goodColor));
+
+            return string.Join(" | ", values);
+        }
 
         #endregion
 
@@ -230,12 +248,15 @@ namespace SILVO.SPP
         {
             csvLines.Add(line);
             lines.Add(line.ToString());
-                    
-            SPP_Signal signal = TryParseToSignal(line);
+            
+            allLog.Add(GetLog(line));
+            
+            SPP_Signal signal = line.TryParse(out bool[] badFlags);
                     
             if (signal != null)
             {
                 signals.Add(signal);
+                validLogs.Add(allLog[^1]);
             }
             else
             {

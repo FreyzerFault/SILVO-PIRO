@@ -2,13 +2,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Csv;
 using DavidUtils;
 using DavidUtils.ExtensionMethods;
 using UnityEngine;
 
 namespace SILVO.SPP
 {
+    [ExecuteAlways]
     public class SPP_TimelineManager: MonoBehaviour
     {
         public GameObject animalTimelinePrefab;
@@ -25,12 +25,9 @@ namespace SILVO.SPP
         [SerializeField, HideInInspector]
         public SPP_CSV csv;
         
-        public void ParseCSVFile()
-        {
-            // Signals = csv.ParseSignals();
-            StartCoroutine(ParseCSVFileCoroutine());
-        }
-        
+        public void ParseCSVFile() => Signals = csv.ParseAllSignals();
+        public void ParseCSVFileAsync() => StartCoroutine(ParseCSVFileCoroutine());
+
         int batchSize = 10;
         public IEnumerator ParseCSVFileCoroutine()
         {
@@ -48,7 +45,7 @@ namespace SILVO.SPP
             csv.signals = batchResults.Where((pair) => pair.Item1 != null).Select(pair => pair.Item1).ToList();
             csv.invalidLines = batchResults.Where(pair => pair.Item1 == null).Select(pair => pair.Item2).ToList();
             
-            csv.UpdateInvalidLog();
+            csv.UpdateLog();
         }
 
         #endregion
@@ -68,33 +65,39 @@ namespace SILVO.SPP
                 UpdateSignals();
             }
         }
+        
         public Dictionary<int, SPP_Signal[]> SignalsPerId { get; private set; } = new(); 
         
         private void UpdateSignals()
         {
-            if (signals.IsNullOrEmpty()) Clear();
+            if (signals.IsNullOrEmpty())
+            {
+                Clear();
+                return;
+            }
             
             RemoveDuplicates();
             OrderByTime();
             UpdateSignalsPerId();
             
-            if (SignalsPerId.Count != _timelines.Count)
-            {
-                Clear();
-                InstantiateAnimalTimelines();
-            }
-            else
-                _timelines.ForEach(tl => tl.Signals = SignalsPerId[tl.ID]);
+            UpdateAnimalTimelines();
         }
         
-        private void RemoveDuplicates() => 
+        private void RemoveDuplicates()
+        { 
+            Debug.Log($"Removing Duplicates. Signals: {Signals.Length} => {signals.Distinct().Count()} Signals\n");
+            Debug.Log($"BEFORE: {string.Join("\n", signals.Select(s => s.ToString()))}");
+            Debug.Log($"AFTER: {string.Join("\n", signals.Distinct().Select(s => s.ToString()))}");
             signals = signals.Distinct().ToArray();
-        
+        }
+
         private void OrderByTime() => 
-            signals = signals.OrderBy(s => s.sentTime).ToArray();
+            signals = signals.OrderBy(s => s.SentDateTime).ToArray();
 
         private void UpdateSignalsPerId() => 
-            SignalsPerId = Signals.GroupBy(s => s.id).ToDictionary(group => group.Key, group => group.ToArray());
+            SignalsPerId = Signals
+                .GroupBy(s => s.id)
+                .ToDictionary(group => group.Key, group => group.ToArray());
 
         #endregion
 
@@ -113,17 +116,34 @@ namespace SILVO.SPP
         }
 
         public int TimelineCount => _timelines.Count;
+
+        public void UpdateAnimalTimelines()
+        {
+            Debug.Log(string.Join("\n", signals.Select(s => s.ToString())));
+            UpdateSignalsPerId();
+            
+            if (SignalsPerId.Count != _timelines.Count)
+            {
+                Clear();
+                InstantiateAnimalTimelines();
+            }
+            else
+                _timelines.ForEach(tl => tl.Signals = SignalsPerId[tl.ID]);
+        }
         
         private void InstantiateAnimalTimelines()
         {
-            SignalsPerId.ForEach(pair =>
+            _timelines = SignalsPerId.Select(pair =>
             {
                 GameObject obj = Instantiate(animalTimelinePrefab, transform);
                 obj.name = $"AnimalTimeline_{pair.Key}";
                 AnimalTimeline timeline = obj.GetComponent<AnimalTimeline>();
                 _timelines.Add(timeline);
-                timeline.Signals = pair.Value;  
-            });
+                timeline.Signals = pair.Value;
+                return timeline;
+            }).ToList();
+            
+            Debug.Log($"Timelines Loaded: {_timelines.Count}");
         }
         
         public void Clear()
