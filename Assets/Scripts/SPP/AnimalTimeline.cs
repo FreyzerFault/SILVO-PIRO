@@ -27,7 +27,7 @@ namespace SILVO.SPP
             }
         }
 
-        public Vector2[] Positions => _timeline.Values.Select(s => s.position).ToArray();
+        public Vector2[] Positions => _timeline.Values.Select(s => s.Position).ToArray();
         public SPP_Signal.SignalType[] Messages => _timeline.Values.Select(s => s.type).ToArray();
         
      
@@ -64,7 +64,7 @@ namespace SILVO.SPP
         public void AddSignal(SPP_Signal signal)
         {
             _timeline[signal.SentDateTime] = signal;
-            _positionsOnTerrain[signal.SentDateTime] = GetPositionOnTerrain(signal.position);
+            _positionsOnTerrain[signal.SentDateTime] = GetPositionOnTerrain(signal.Position);
             onCheckpointAdded?.Invoke();
         }
 
@@ -76,12 +76,12 @@ namespace SILVO.SPP
         #region TERRAIN POSITION
 
         private float GetHeight(Vector2 pos) => TerrainManager.Instance.Terrain.GetInterpolatedHeight(pos);
-        private float GetHeight(DateTime time) => GetHeight(_timeline[time].position);
+        private float GetHeight(DateTime time) => GetHeight(_timeline[time].Position);
         private float GetHeight(int index) => GetHeight(Positions[index]);
 
         private Vector3 GetPositionOnTerrain(Vector2 pos) =>
             TerrainManager.Instance.GetRelativeTerrainPositionWithHeight(pos);
-        private Vector3 GetPositionOnTerrain(DateTime time) => GetPositionOnTerrain(_timeline[time].position);
+        private Vector3 GetPositionOnTerrain(DateTime time) => GetPositionOnTerrain(_timeline[time].Position);
         private Vector3 GetPositionOnTerrain(int index) => GetPositionOnTerrain(Positions[index]);
         
         private Vector3[] GetPositionsOnTerrain() => Positions.Select(GetPositionOnTerrain).ToArray();
@@ -101,7 +101,7 @@ namespace SILVO.SPP
         #region LOG
 
         public string[] GetSignalsLog() => Signals.Select(s =>
-            $"[{s.SignalTypeLabel}] on {s.position} | SENT: {s.SentDateTime} - RECEIVED: {s.ReceivedDateTime}").ToArray();
+            $"[{s.SignalTypeLabel}] on {s.Position} | SENT: {s.SentDateTime} - RECEIVED: {s.ReceivedDateTime}").ToArray();
 
         #endregion
     }

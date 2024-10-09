@@ -89,6 +89,9 @@ namespace SILVO.Terrain
 
 
         #region WORLD - TERRAIN CONVERSION
+        
+        public Projecter GetWorldToTerrainProjecter() => new(WorldExtents, TerrainRectangle);
+        public Projecter GetTerrainToWorldProjecter() => new(TerrainExtents, WorldRectangle);
 
         public Vector2 GetRelativeTerrainPosition(Vector2 worldPosition) =>
             GetNormalizedPosition(worldPosition) * TerrainSize;

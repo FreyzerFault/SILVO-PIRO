@@ -1,8 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DavidUtils.ExtensionMethods;
+using DotSpatial.Projections;
+using DotSpatial.Projections.ProjectedCategories;
+using DotSpatial.Projections.Transforms;
 using SILVO.Misc_Utils;
+using SILVO.Terrain;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace SILVO.SPP
 {
@@ -25,29 +31,38 @@ namespace SILVO.SPP
         [SerializeField] public int id;
         [SerializeField] private SerializableDateTime receivedTime;
         [SerializeField] private SerializableDateTime sentTime;
-        [SerializeField] public Vector2 position;
+        [SerializeField] private Vector2 positionLonLat;
+        [SerializeField] private Vector2 positionUTM;
         [SerializeField] public SignalType type;
+        
         public string SignalTypeLabel => signalLabel[type];
         public string SignalTypeString => signalStr[type];
 
         public DateTime ReceivedDateTime => receivedTime.DateTime;
         public DateTime SentDateTime => sentTime.DateTime;
+
+        public Vector2 Position => positionUTM;
         
-        
-        public SPP_Signal(int id = -1, DateTime receivedTime = default, DateTime sentTime = default, Vector2 position = default, SignalType type = SignalType.Seq)
+        public SPP_Signal(int id = -1, DateTime receivedTime = default, DateTime sentTime = default, Vector2 positionLonLat = default, SignalType type = SignalType.Seq)
         {
             this.id = id;
             this.receivedTime = new SerializableDateTime(receivedTime);
             this.sentTime = new SerializableDateTime(sentTime);
-            this.position = position;
+            this.positionLonLat = positionLonLat;
             this.type = type;
+
+            ProjectionInfo wgsProjInfo = ProjectionInfo.FromEpsgCode(4326);
+            ProjectionInfo utm30NProjInfo = ProjectionInfo.FromEpsgCode(25830);
+            double[] points = { positionLonLat.x, positionLonLat.y };
+            Reproject.ReprojectPoints(points, new double[] {0}, wgsProjInfo, utm30NProjInfo, 0, 1);
+            positionUTM = new Vector2((float)points[0], (float)points[1]);
         }
 
-        public override string ToString() => $"[{id} - {sentTime.FullDateStr}]: {SignalTypeLabel} at {position}.";
+        public override string ToString() => $"[{id} - {sentTime.FullDateStr}]: {SignalTypeLabel} at {positionLonLat}.";
 
         public string ToFormatedString() =>
             $"<b>[{id}</b> <color=gray>{sentTime.FullDateStr}</color>]:\t" +
-            $"<color={signalColorStr[type]}>{SignalTypeLabel}</color> at {position}.";
+            $"<color={signalColorStr[type]}>{SignalTypeLabel}</color> at {positionLonLat}.";
 
         public static SignalType GetSignalType(string typeStr) => 
             !signalStr.ContainsValue(typeStr) 

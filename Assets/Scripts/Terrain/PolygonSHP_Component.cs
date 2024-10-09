@@ -94,7 +94,7 @@ namespace SILVO.Terrain
         {
             if (TerrainManager.Instance?.Terrain == null) return;
             
-            _terrainProjecter = new Projecter(TerrainManager.Instance.WorldExtents, TerrainManager.Instance.TerrainRectangle);
+            _terrainProjecter = TerrainManager.Instance.GetWorldToTerrainProjecter();
             RemapWorldPolygonToTerrain();
         }
         

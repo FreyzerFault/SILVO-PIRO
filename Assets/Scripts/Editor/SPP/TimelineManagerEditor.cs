@@ -1,3 +1,6 @@
+using System;
+using System.Linq;
+using DavidUtils.Editor.Rendering;
 using DavidUtils.ExtensionMethods;
 using SILVO.SPP;
 using UnityEditor;
@@ -6,37 +9,103 @@ using UnityEngine;
 namespace SILVO.Editor.SPP
 {
     [CustomEditor(typeof(SPP_TimelineManager))]
-    public class TimelineManagerEditor: UnityEditor.Editor
+    public class TimelineManagerEditor: UnityEditor.Editor, IUndoableEditor
     {
+        bool foldoutRendering = true;
+
         public override void OnInspectorGUI()
         {
             base.OnInspectorGUI();
             
-            var timelineManager = (SPP_TimelineManager) target;
-            if (timelineManager == null) return;
+            var manager = (SPP_TimelineManager) target;
+            if (manager == null) return;
             
             EditorGUILayout.Separator();
             
-            if (timelineManager.Signals.IsNullOrEmpty() && GUILayout.Button("Load Timelines"))
-                timelineManager.ParseCSVFileAsync();
+            if (manager.Signals.IsNullOrEmpty() && GUILayout.Button("Load Timelines"))
+                manager.ParseCSVFileAsync();
             
-            if (timelineManager.Signals.NotNullOrEmpty())
+            if (manager.Signals.NotNullOrEmpty())
+                SignalsInfoGUI(manager.csv);
+            
+            EditorGUILayout.Separator();
+            
+            EditorGUILayout.LabelField($"{manager.TimelineCount} Timelines Loaded", EditorStyles.largeLabel);
+            
+            EditorGUILayout.Separator();
+            
+            if (GUILayout.Button("Update Timelines")) manager.UpdateAnimalTimelines();
+            
+            EditorGUILayout.Separator();
+            
+            foldoutRendering = EditorGUILayout.Foldout(foldoutRendering, "Rendering", true, EditorStyles.foldoutHeader);
+            if (foldoutRendering) RenderingGUI(manager);
+        }
+
+        private static void SignalsInfoGUI(SPP_CSV csv)
+        {
+            int validSignals = csv.validLines.Count;
+            int invalidSignals = csv.invalidLines.Count;
+            int totalSignals = csv.csvLines.Count;
+            EditorGUILayout.LabelField(validSignals + invalidSignals < totalSignals
+                ? $"Loading {validSignals + invalidSignals} / {totalSignals} signals..."
+                : $"Loaded {validSignals} signals and {invalidSignals} invalid signals.");
+        }
+
+        private static void RenderingGUI(SPP_TimelineManager manager)
+        {
+            EditorGUI.indentLevel++;
+            if (manager.TimelineCount == 0)
             {
-                int validSignals = timelineManager.csv.validLines.Count;
-                int invalidSignals = timelineManager.csv.invalidLines.Count;
-                int totalSignals = timelineManager.csv.csvLines.Count;
-                EditorGUILayout.LabelField(validSignals + invalidSignals < totalSignals
-                    ? $"Loading {validSignals + invalidSignals} / {totalSignals} signals..."
-                    : $"Loaded {validSignals} signals and {invalidSignals} invalid signals.");
+                EditorGUILayout.HelpBox("No Timelines Loaded. Update Them", MessageType.Warning);
+                return;
+            }
+
+            var prefabRenderer = manager.animalTimelinePrefab.GetComponent<TimelineRenderer>();
+            if (prefabRenderer == null)
+            {
+                EditorGUILayout.HelpBox("No TimelineRenderer found in AnimalTimeline Prefab", MessageType.Error);
+                return;
             }
             
-            EditorGUILayout.Separator();
+            EditorGUI.BeginChangeCheck();
+            TimelineRendererEditor.LineRendererGUI(prefabRenderer);
+            if (EditorGUI.EndChangeCheck())
+            {
+                manager.Timelines.ForEach((timeline, i) =>
+                {
+                    Undo.RecordObject(timeline, $"Timeline {i} Changed");
+                    timeline.Renderer.LineColor = prefabRenderer.LineColor;
+                    timeline.Renderer.LineColorCompleted = prefabRenderer.LineColorCompleted;
+                    timeline.Renderer.LineWidth = prefabRenderer.LineWidth;
+                    timeline.Renderer.LineVisible = prefabRenderer.LineVisible;
+                });
+            }
             
-            EditorGUILayout.LabelField($"{timelineManager.TimelineCount} Timelines Loaded", EditorStyles.boldLabel);
-            
-            EditorGUILayout.Separator();
-            
-            if (GUILayout.Button("Update Timelines")) timelineManager.UpdateAnimalTimelines();
+            EditorGUI.indentLevel--;
         }
+
+        
+        #region UNDO
+
+        public Undo.UndoRedoEventCallback UndoRedoEvent => (in UndoRedoInfo undo) =>
+        {
+            var manager = (SPP_TimelineManager)target;
+            if (manager == null || manager.Timelines.IsNullOrEmpty()) return;
+
+            bool badTag = !int.TryParse(undo.undoName.Split(" ")[1], out int index);
+            if (badTag)
+            {
+                Debug.LogError($"Bad Tag for Undo (without int): {undo.undoName}");
+                return;
+            }
+            
+            manager.Timelines[index].Renderer.UpdateLineRendererAppearance();
+        };
+
+        private void OnEnable() => Undo.undoRedoEvent += UndoRedoEvent;
+        private void OnDisable() => Undo.undoRedoEvent -= UndoRedoEvent;
+        
+        #endregion
     }
 }

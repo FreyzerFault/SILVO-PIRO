@@ -31,7 +31,7 @@ namespace SILVO.Editor.SPP
             EditorGUILayout.Separator();
 
             EditorGUI.BeginChangeCheck();
-            timeline.Renderer.lineColor = EditorGUILayout.ColorField("Line Color", timeline.Renderer.lineColor);
+            timeline.Renderer.LineColor = EditorGUILayout.ColorField("Line Color", timeline.Renderer.LineColor);
             if (EditorGUI.EndChangeCheck()) 
                 timeline.Renderer.UpdateLineColor();
         }
