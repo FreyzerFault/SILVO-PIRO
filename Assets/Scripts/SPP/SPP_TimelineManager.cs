@@ -83,13 +83,7 @@ namespace SILVO.SPP
             UpdateAnimalTimelines();
         }
         
-        private void RemoveDuplicates()
-        { 
-            Debug.Log($"Removing Duplicates. Signals: {Signals.Length} => {signals.Distinct().Count()} Signals\n");
-            Debug.Log($"BEFORE: {string.Join("\n", signals.Select(s => s.ToString()))}");
-            Debug.Log($"AFTER: {string.Join("\n", signals.Distinct().Select(s => s.ToString()))}");
-            signals = signals.Distinct().ToArray();
-        }
+        private void RemoveDuplicates() => signals = signals.Distinct().ToArray();
 
         private void OrderByTime() => 
             signals = signals.OrderBy(s => s.SentDateTime).ToArray();

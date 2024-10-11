@@ -21,8 +21,7 @@ namespace SILVO.SPP
             get => _timeline.Values.ToArray();
             set
             {
-                _timeline = value.Where(s1 => value.Count(s1.Equals) == 1).ToDictionary(s => s.SentDateTime);
-                Debug.Log($"Signals Updated in id {_id}: {value.Length} to " + Signals.Length);
+                _timeline = value.ToDictionaryByDate();
                 UpdateCheckpoints();
             }
         }

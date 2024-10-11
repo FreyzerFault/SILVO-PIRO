@@ -122,4 +122,10 @@ namespace SILVO.SPP
 
         public override int GetHashCode() => HashCode.Combine(id, sentTime);
     }
+
+    public static class SPP_Signal_Extensions
+    {
+        public static Dictionary<DateTime, SPP_Signal> ToDictionaryByDate(this SPP_Signal[] signals) => 
+            signals.Where(s1 => signals.Count(s1.Equals) == 1).ToDictionary(s => s.SentDateTime);
+    }
 }

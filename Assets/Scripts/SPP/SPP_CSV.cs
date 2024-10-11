@@ -57,7 +57,9 @@ namespace SILVO.SPP
             Array.Fill(badFlags, false);
             
             // Debe tener todas las columnas
-            if (!IsValid) Debug.LogError($"CSV line is not valid: {this}");
+            if (!IsValid) 
+                Debug.LogError($"CSV line is not valid: {this}\n" +
+                               $"Index: {Index} | Values: {values.Length} | Headers: {ColumnCount}");
             
             // RECEIVED TIME
             badFlags[0] = !DateTime.TryParse(this["time"], out DateTime receivedTime);
@@ -92,6 +94,13 @@ namespace SILVO.SPP
                                  $"{errMsg}");
                 return null;
             }
+            
+            // Antes de crear la señal debemos asegurarnos de que la posicion sea valida
+            // Hay datos que traen la posicion escalada * 1.000.000, sin punto decimal
+            // Reescalarlo dividiendo / 1.000.000
+            // (383831473 => 38.3831473)
+            if (position.x > 180 || position.x < -180 || position.y > 90 || position.y < -90) 
+                position /= 1000000;
             
             // All GOOD => Create Signal
             return new SPP_Signal(id, receivedTime, sentTime, position, type);
@@ -132,9 +141,22 @@ namespace SILVO.SPP
         {
             filePath = csvPath;
 
-            csvLines = CsvReader
-                .ReadFromText(ReadTextFile(filePath))
-                .Select(line => new SPP_CsvLine(line.Raw, line.Index)).ToList();
+            // Read RAW Lines
+            var rawCsvLines = CsvReader.ReadFromText(ReadTextFile(filePath)).ToArray();
+            
+            // Check Separator used
+            char[] possibleSeparators = {',', ';'};
+            string rawSampleLine = rawCsvLines.First().Raw.Replace(";;", "; ;").Replace(",,", ", ,");
+            Debug.Log("Searching for Separator...\n" +
+                      $"Column Count: {rawCsvLines.First().ColumnCount}" +
+                      $"After Replace Duplicate Comas:\n" +
+                      $"{rawCsvLines.First().Raw.Replace(",,", ", ,")}\n" +
+                      $"{rawCsvLines.First().Raw.Replace(";;", "; ;")}\n" +
+                      $"Repeticiones de coma: {rawSampleLine.Count(c => c == ',')}\n" +
+                      $"{rawSampleLine.Count(c => c == ';')}");
+            char separator = possibleSeparators.First(sep => rawSampleLine.Count(c => c == sep) == rawCsvLines.First().ColumnCount - 1);
+            
+            csvLines = rawCsvLines.Select(line => new SPP_CsvLine(line.Raw, line.Index, separator.ToString())).ToList();
             lines = csvLines.Select(l => l.ToString()).ToList();
         }
         
