@@ -13,93 +13,81 @@ namespace SILVO.SPP
         private int _id = -1;
         public int ID => _id;
 
+        private AnimalTimelineRenderer atRenderer;
+
+        #region SIGNALS
+
         private Dictionary<DateTime, SPP_Signal> _timeline = new();
         
-        public DateTime[] TimesStamps => _timeline.Keys.ToArray();
-        public SPP_Signal[] Signals
+        public DateTime[] TimesStamps => _timeline.Keys.OrderBy(t => t).ToArray();
+        public SPP_Signal[] SignalsOrdered
         {
-            get => _timeline.Values.ToArray();
+            get => _timeline.Values.OrderBy(s => s.SentDateTime).ToArray();
             set
             {
                 _timeline = value.ToDictionaryByDate();
-                UpdateCheckpoints();
+                _id = SignalsOrdered.First().id;
+                Checkpoints = _timeline.Values.Select(s => s.Position).Select(GetPositionOnTerrain).ToList();
+                Debug.Log($"Checkpoints updated with {Checkpoints.Count}\n" +
+                          $"Dictionary updated with {_timeline.Count}");
             }
         }
 
-        public Vector2[] Positions => _timeline.Values.Select(s => s.Position).ToArray();
-        public SPP_Signal.SignalType[] Messages => _timeline.Values.Select(s => s.type).ToArray();
+        public SPP_Signal.SignalType[] SignalTypes => SignalsOrdered.Select(s => s.type).ToArray();
         
-     
-        private Dictionary<DateTime, Vector3> _positionsOnTerrain = new();
-        public override Vector3[] Checkpoints => _positionsOnTerrain.Values.ToArray();
+        public Vector3[] CheckpointsByType(SPP_Signal.SignalType type) =>
+            Checkpoints.FromIndices(SignalsOrdered.AllIndices(s => s.type == type)).ToArray();
 
-        private void Start()
+        
+        #endregion
+
+
+        protected override void OnEnable()
         {
-            if (Signals.IsNullOrEmpty()) return;
-            
-            UpdateCheckpoints();
+            atRenderer = GetComponent<AnimalTimelineRenderer>() ?? gameObject.AddComponent<AnimalTimelineRenderer>();
+            atRenderer.Timeline = this;
         }
 
-        public SPP_Signal this[int index] => Signals[index];
+        public SPP_Signal this[int index] => SignalsOrdered[index];
         public SPP_Signal this[DateTime time] => _timeline[time];
-
-
-        private void OnEnable() => onCheckpointAdded += UpdateCheckpointColors;
-        private void OnDisable() => onCheckpointAdded -= UpdateCheckpointColors;
-
-        public override void UpdateCheckpoints()
-        {
-            if (_id == -1)
-                _id = Signals[0].id;
-            
-            _positionsOnTerrain = GetPositionsOnTerrainTimeline();
-            
-            Renderer.Timeline = this;
-            UpdateCheckpointColors();
-        }
-
+        
+        
         #region CRUD
 
         public void AddSignal(SPP_Signal signal)
         {
             _timeline[signal.SentDateTime] = signal;
-            _positionsOnTerrain[signal.SentDateTime] = GetPositionOnTerrain(signal.Position);
-            onCheckpointAdded?.Invoke();
+            int index = SignalsOrdered.IndexOf(signal);
+            InsertCheckpoint(index, GetPositionOnTerrain(signal.Position));
         }
 
-        public void AddSignals(SPP_Signal[] signals) => signals.ForEach(AddSignal);
+        public void AddSignals(SPP_Signal[] signals)
+        {
+            signals.ForEach(s => _timeline.Add(s.SentDateTime, s));
+            var signalsOrdered = SignalsOrdered;
+            signals.ForEach(s => InsertCheckpoint(signalsOrdered.IndexOf(s), GetPositionOnTerrain(s.Position)));
+        }
+        
+        public void RemoveSignal(SPP_Signal signal)
+        {
+            _timeline.Remove(signal.SentDateTime);
+            RemoveCheckpoint(SignalsOrdered.IndexOf(signal));
+        }
 
         #endregion
 
 
         #region TERRAIN POSITION
 
-        private float GetHeight(Vector2 pos) => TerrainManager.Instance.Terrain.GetInterpolatedHeight(pos);
-        private float GetHeight(DateTime time) => GetHeight(_timeline[time].Position);
-        private float GetHeight(int index) => GetHeight(Positions[index]);
-
         private Vector3 GetPositionOnTerrain(Vector2 pos) =>
             TerrainManager.Instance.GetRelativeTerrainPositionWithHeight(pos);
-        private Vector3 GetPositionOnTerrain(DateTime time) => GetPositionOnTerrain(_timeline[time].Position);
-        private Vector3 GetPositionOnTerrain(int index) => GetPositionOnTerrain(Positions[index]);
         
-        private Vector3[] GetPositionsOnTerrain() => Positions.Select(GetPositionOnTerrain).ToArray();
-        private Dictionary<DateTime, Vector3> GetPositionsOnTerrainTimeline() =>
-            TimesStamps.ToDictionary((time) => time, GetPositionOnTerrain);
-
         #endregion
         
         
-        #region RENDERING
-        
-        public void UpdateCheckpointColors() => Renderer.Colors = Signals.Select(s => SPP_Signal.GetSignalColor(s.type)).ToArray();
-
-        #endregion
-
-
         #region LOG
 
-        public string[] GetSignalsLog() => Signals.Select(s =>
+        public string[] GetSignalsLog() => SignalsOrdered.Select(s =>
             $"[{s.SignalTypeLabel}] on {s.Position} | SENT: {s.SentDateTime} - RECEIVED: {s.ReceivedDateTime}").ToArray();
 
         #endregion

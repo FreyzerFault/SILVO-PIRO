@@ -1,52 +1,104 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
 namespace SILVO.SPP
 {
-    [RequireComponent(typeof(TimelineRenderer))]
     public abstract class Timeline: MonoBehaviour
     {
-        private float progress;
+        // CHECKPOINTS
+        [SerializeField] protected List<Vector3> checkpoints;
+        public virtual List<Vector3> Checkpoints
+        {
+            get => checkpoints;
+            set
+            {
+                checkpoints = value;
+                onCheckpointsUpdated?.Invoke();
+            }
+        }
+        public int PointCount => Checkpoints.Count;
+        public bool IsEmpty => PointCount == 0;
 
+        public Action<Vector3> onCheckpointAdded;
+        public Action<int, Vector3> onCheckpointInserted;
+        public Action<int, Vector3> onCheckpointsDeleted;
+        public Action<int, Vector3> onCheckpointsMoved;
+        public Action onCheckpointsUpdated;
+        
+        // PROGRESS
+        private float progress;
         public float Progress
         {
             get => progress;
             set
             {
                 progress = value;
-                onProgressChanged?.Invoke();
+                onProgressChanged?.Invoke(value);
             }
         }
         
-        public Action onProgressChanged;
+        public Action<float> onProgressChanged;
         
         
-        protected virtual void Awake() => renderer = GetComponent<TimelineRenderer>();
-        
-        
+        protected virtual void OnEnable()
+        {
+            renderer = GetComponent<TimelineRenderer>() ?? gameObject.AddComponent<TimelineRenderer>();
+            renderer.Timeline = this;
+        }
+
+
         #region CHECKPOINTS
         
-        public virtual Vector3[] Checkpoints { get; }
-        public int PointCount => Checkpoints.Length;
-        public bool IsEmpty => PointCount == 0;
+        public void AddCheckpoint(Vector3 position)
+        {
+            checkpoints.Add(position);
+            onCheckpointAdded?.Invoke(position);
+        }
         
-        public abstract void UpdateCheckpoints();
+        public void InsertCheckpoint(int index, Vector3 position)
+        {
+            if (index == -1) AddCheckpoint(position);
+            if (index < 0 || index >= PointCount) return;
+            checkpoints.Insert(index, position);
+            onCheckpointInserted?.Invoke(index, position);
+        }
+
+        public void RemoveCheckpoint(int index = -1)
+        {
+            if (index == -1) RemoveCheckpoint(Checkpoints.Count - 1);
+            if (index < 0 || index >= PointCount) return;
+            Vector3 pointRemoved = checkpoints[index];
+            checkpoints.RemoveAt(index);
+            onCheckpointsDeleted?.Invoke(index, pointRemoved);
+        }
         
-        public Action onCheckpointAdded;
+        public void MoveCheckpoint(Vector3 position, int index = -1)
+        {
+            if (index == -1) MoveCheckpoint(position, Checkpoints.Count - 1);
+            if (index < 0 || index >= PointCount) return;
+            checkpoints[index] = position;
+            onCheckpointsMoved?.Invoke(index, position);
+        }
         
-        public bool OnCheckpoint => PointCount * Progress % 1f == 0f;
-        public bool OnStart => Mathf.Approximately(progress, 0f);
-        public bool OnEnd => Mathf.Approximately(progress, 1f);
+        #endregion
+
         
-        public int PrevCheckpointIndex => OnCheckpoint
-            ? CurrentCheckpointIndex - (OnStart ? 0 : 1)
+        #region CHECKPOINT PROGRESS
+
+        public bool IsOnCheckpoint => PointCount * Progress % 1f == 0f;
+        public bool IsOnStart => Mathf.Approximately(progress, 0f);
+        public bool IsOnEnd => Mathf.Approximately(progress, 1f);
+        
+        public int PrevCheckpointIndex => IsOnCheckpoint
+            ? CurrentCheckpointIndex - (IsOnStart ? 0 : 1)
             : Mathf.FloorToInt(PointCount* Progress);
         
         public int CurrentCheckpointIndex => Mathf.RoundToInt(PointCount * Progress);
         
-        public int NextCheckpointIndex => OnCheckpoint
-            ? CurrentCheckpointIndex + (OnEnd ? 0 : 1)
+        public int NextCheckpointIndex => IsOnCheckpoint
+            ? CurrentCheckpointIndex + (IsOnEnd ? 0 : 1)
             : Mathf.CeilToInt(PointCount * Progress);
 
         public Vector3 PrevCheckpoint => Checkpoints[PrevCheckpointIndex];
@@ -56,12 +108,12 @@ namespace SILVO.SPP
         public Vector3[] CheckpointsCompleted() => 
             IsEmpty
                 ? Array.Empty<Vector3>()
-                : Checkpoints[..Mathf.FloorToInt(PointCount * Progress)];
+                : Checkpoints.ToArray()[..Mathf.FloorToInt(PointCount * Progress)];
         
         public Vector3[] CheckpointsRemaining() => 
             IsEmpty
                 ? Array.Empty<Vector3>()
-                : Checkpoints[Mathf.FloorToInt(PointCount * Progress)..];
+                : Checkpoints.ToArray()[Mathf.FloorToInt(PointCount * Progress)..];
 
 
         public Vector3 CurrentPosition => Vector3.Lerp(
@@ -72,11 +124,11 @@ namespace SILVO.SPP
                 (float)NextCheckpointIndex / PointCount,
                 progress)
         );
-        
+
         #endregion
 
-
-        #region MOVE TO CHECKPOINT
+        
+        #region MOVE PROGRESS
 
         public bool GoTo(int checkpointIndex)
         {
@@ -87,7 +139,7 @@ namespace SILVO.SPP
         
         public bool GoTo(Vector3 checkpoint) => 
             Checkpoints.Contains(checkpoint)
-            && GoTo(Array.IndexOf(Checkpoints, checkpoint));
+            && GoTo(checkpoints.IndexOf(checkpoint));
         
         public bool GoToPrevCheckpoint() => GoTo(PrevCheckpointIndex);
         public bool GoToNextCheckpoint() => GoTo(NextCheckpointIndex);

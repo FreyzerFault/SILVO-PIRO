@@ -19,11 +19,7 @@ namespace SILVO.Editor.SPP
             if (timeline.IsEmpty)
             {
                 EditorGUILayout.LabelField("Empty Timeline", EditorStyles.centeredGreyMiniLabel);
-                
-                if (GUILayout.Button("Load Timeline"))
-                    timeline.UpdateCheckpoints();
-                else
-                    return;
+                return;
             }
             
             EditorGUILayout.LabelField($"{timeline.PointCount} Checkpoints", EditorStyles.boldLabel);
@@ -56,11 +52,12 @@ namespace SILVO.Editor.SPP
             
             // TIMELINE
             {
-                EditorGUILayout.LabelField($"ANIMAL TIMELINE", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField($"ANIMAL TIMELINE [ID: {timeline.ID}]", EditorStyles.boldLabel);
+                
+                EditorGUILayout.Separator();
 
                 EditorGUI.indentLevel++;
-
-                EditorGUILayout.LabelField($"ID {timeline.ID}");
+                
                 EditorGUILayout.LabelField($"{timeline.TimesStamps.First()} - {timeline.TimesStamps.Last()}");
                 
                 signalsFoldout = EditorGUILayout.Foldout(signalsFoldout, "Signals", true);
@@ -70,26 +67,6 @@ namespace SILVO.Editor.SPP
                 EditorGUI.indentLevel--;
             }
             
-            EditorGUILayout.Separator();
-            
-            // COLORS
-            {
-                colorFoldout = EditorGUILayout.Foldout(colorFoldout, "Signal Color", true);
-
-                if (!colorFoldout) return;
-
-                EditorGUI.indentLevel++;
-                EditorGUI.BeginChangeCheck();
-                {
-                    EditorGUILayout.ColorField("Sequence", SPP_Signal.GetSignalColor(SPP_Signal.SignalType.Seq));
-                    EditorGUILayout.ColorField("Poll", SPP_Signal.GetSignalColor(SPP_Signal.SignalType.Poll));
-                    EditorGUILayout.ColorField("Warning", SPP_Signal.GetSignalColor(SPP_Signal.SignalType.Warn));
-                    EditorGUILayout.ColorField("Pulse", SPP_Signal.GetSignalColor(SPP_Signal.SignalType.Pulse));
-                }
-                if (EditorGUI.EndChangeCheck())
-                    timeline.UpdateCheckpointColors();
-                EditorGUI.indentLevel--;
-            }
         }
     }
 }

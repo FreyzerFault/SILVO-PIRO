@@ -13,7 +13,7 @@ namespace SILVO.SPP
     {
         public GameObject animalTimelinePrefab;
 
-        private void Awake()
+        private void OnEnable()
         {
             _timelines = GetComponentsInChildren<AnimalTimeline>().ToList();
             UpdateSignals();
@@ -113,7 +113,6 @@ namespace SILVO.SPP
 
         public void UpdateAnimalTimelines()
         {
-            Debug.Log(string.Join("\n", signals.Select(s => s.ToString())));
             UpdateSignalsPerId();
             
             if (SignalsPerId.Count != _timelines.Count)
@@ -122,7 +121,7 @@ namespace SILVO.SPP
                 InstantiateAnimalTimelines();
             }
             else
-                _timelines.ForEach(tl => tl.Signals = SignalsPerId[tl.ID]);
+                _timelines.ForEach(tl => tl.SignalsOrdered = SignalsPerId[tl.ID]);
         }
         
         private void InstantiateAnimalTimelines()
@@ -133,11 +132,9 @@ namespace SILVO.SPP
                 obj.name = $"AnimalTimeline_{pair.Key}";
                 AnimalTimeline timeline = obj.GetComponent<AnimalTimeline>();
                 _timelines.Add(timeline);
-                timeline.Signals = pair.Value;
+                timeline.SignalsOrdered = pair.Value;
                 return timeline;
             }).ToList();
-            
-            Debug.Log($"Timelines Loaded: {_timelines.Count}");
         }
         
         public void Clear()

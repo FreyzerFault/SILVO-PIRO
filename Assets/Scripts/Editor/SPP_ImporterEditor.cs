@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using Csv;
 using DavidUtils.ExtensionMethods;
@@ -60,14 +62,14 @@ namespace SILVO.Editor
             EditorGUILayout.Separator();
             EditorGUILayout.Separator();
             
-            serializedObject.ApplyModifiedProperties();
+            // serializedObject.ApplyModifiedProperties();
             
             ApplyRevertGUI();
         }
 
         private void InfoGUI(SPP_CSV csv)
         {
-            EditorGUILayout.BeginVertical();
+            EditorGUILayout.BeginVertical(  );
             
             EditorGUILayout.LabelField($"{csv.csvLines.Count} Rows of Data", EditorStyles.boldLabel);
             
@@ -113,28 +115,39 @@ namespace SILVO.Editor
             EditorGUILayout.EndVertical();
         }
 
-        private int ExpandableList<T>(T[] list, int numVisible, string header = null)
+        private int ExpandableList<T>(IEnumerable<T> list, int numVisible, string header = null)
         {
-            EditorGUILayout.BeginHorizontal(new GUIStyle() { alignment = TextAnchor.MiddleLeft },
+            EditorGUILayout.BeginHorizontal(new GUIStyle { alignment = TextAnchor.MiddleLeft },
                 GUILayout.ExpandWidth(false), GUILayout.MinWidth(0));
-            {
-                if (GUILayout.Button("-", GUILayout.MaxWidth(20))) numVisible -= 10;
-                if (GUILayout.Button("+", GUILayout.MaxWidth(20))) numVisible += 10;
-                EditorGUILayout.LabelField($"{numVisible} / {list.Length}",
-                    GUILayout.ExpandWidth(false), GUILayout.MinWidth(0));
 
-                numVisible = Mathf.Clamp(numVisible, 0, list.Length);
-            }
+            numVisible = CounterGUI(numVisible, 10, list.Count());
+            
             EditorGUILayout.EndHorizontal();
 
             EditorGUILayout.Separator();
 
-            if (header != null)
-                EditorGUILayout.LabelField(header, monoStyle);
+            GUIContent tableContent = new GUIContent($"{header ?? ""}\n" +
+                                                     string.Join("", '-'.ToFilledArray(header?.Length ?? 20)) + "\n" +
+                                                     $"{string.Join("\n", list.Take(numVisible))}");
             
-            list.Take(numVisible).ForEach(line => EditorGUILayout.LabelField($"{line}", monoStyle));
+            float width = EditorGUIUtility.currentViewWidth - 50;
+            float size = monoStyle.CalcHeight(tableContent, width);
+
+            EditorGUILayout.LabelField(tableContent, monoStyle, GUILayout.MaxHeight(size));
+            
+            // list.Take(numVisible).ForEach(line => EditorGUILayout.LabelField($"{line}", monoStyle));
 
             return numVisible;
+        }
+
+        private int CounterGUI(int counter, int increment, int max)
+        {
+            if (GUILayout.Button("-", GUILayout.MaxWidth(20))) counter -= increment;
+            if (GUILayout.Button("+", GUILayout.MaxWidth(20))) counter += increment;
+            EditorGUILayout.LabelField($"{counter} / {max}",
+                GUILayout.ExpandWidth(false), GUILayout.MinWidth(0));
+
+            return Mathf.Clamp(counter, 0, max);
         }
     }
 }

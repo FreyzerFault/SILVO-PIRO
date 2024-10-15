@@ -64,12 +64,15 @@ namespace SILVO.SPP
             $"<b>[{id}</b> <color=gray>{sentTime.FullDateStr}</color>]:\t" +
             $"<color={signalColorStr[type]}>{SignalTypeLabel}</color> at {positionLonLat}.";
 
+        public static SignalType[] GetTypes => Enum.GetValues(typeof(SignalType)).Cast<SignalType>().ToArray();
+        
         public static SignalType GetSignalType(string typeStr) => 
             !signalStr.ContainsValue(typeStr) 
                 ? SignalType.Unknown 
                 : signalStr.First(s => s.Value == typeStr).Key;
         
         public static Color GetSignalColor(SignalType signalType) => signalColor[signalType];
+        public static Color SetSignalColor(SignalType signalType, Color color) => signalColor[signalType] = color;
         
         private static Dictionary<SignalType, string> signalLabel = new()
         {

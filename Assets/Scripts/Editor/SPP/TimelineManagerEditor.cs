@@ -15,18 +15,22 @@ namespace SILVO.Editor.SPP
 
         public override void OnInspectorGUI()
         {
-            base.OnInspectorGUI();
-            
             var manager = (SPP_TimelineManager) target;
             if (manager == null) return;
             
+            manager.animalTimelinePrefab = (GameObject)EditorGUILayout.ObjectField("Timeline Prefab", manager.animalTimelinePrefab, typeof(GameObject), true);
+            
             EditorGUILayout.Separator();
+
+            if (manager.Signals.IsNullOrEmpty())
+            {
+                if (GUILayout.Button("Load Timelines"))
+                    manager.ParseCSVFileAsync();
+                
+                return;
+            }
             
-            if (manager.Signals.IsNullOrEmpty() && GUILayout.Button("Load Timelines"))
-                manager.ParseCSVFileAsync();
-            
-            if (manager.Signals.NotNullOrEmpty())
-                SignalsInfoGUI(manager.csv);
+            SignalsInfoGUI(manager.csv);
             
             EditorGUILayout.Separator();
             
@@ -35,6 +39,7 @@ namespace SILVO.Editor.SPP
             EditorGUILayout.Separator();
             
             if (GUILayout.Button("Update Timelines")) manager.UpdateAnimalTimelines();
+            if (GUILayout.Button("Clear Timelines")) manager.Clear();
             
             EditorGUILayout.Separator();
             

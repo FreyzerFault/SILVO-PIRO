@@ -1,9 +1,9 @@
+using System.Collections.Generic;
 using System.Linq;
 using DavidUtils.ExtensionMethods;
 using DavidUtils.Rendering;
 using DavidUtils.Rendering.Extensions;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace SILVO.SPP
 {
@@ -14,7 +14,7 @@ namespace SILVO.SPP
 
         public Timeline Timeline
         {
-            get => timeline;
+            get => timeline ??= GetComponent<Timeline>();
             set
             {
                 timeline = value;
@@ -22,10 +22,12 @@ namespace SILVO.SPP
             }
         }
 
+        
+        private Vector3[] LocalCheckpoints => Timeline.Checkpoints.Select(transform.InverseTransformPoint).ToArray();
 
         protected void Awake()
         {
-            Mode = RenderMode.Sphere;
+            Mode = RenderMode.Point;
             
             InitializeLineRenderers();
             
@@ -36,14 +38,23 @@ namespace SILVO.SPP
 
         private void OnEnable()
         {
-            if (timeline == null) return;
-            timeline.onCheckpointAdded += UpdateTimeline;
-            timeline.onProgressChanged += UpdateTimeline;
+            if (Timeline == null) return;
+            Timeline.onCheckpointsUpdated += UpdateCheckPoints;
+            Timeline.onCheckpointAdded += AddCheckpoint;
+            Timeline.onCheckpointInserted += InsertCheckpoint;
+            Timeline.onCheckpointsDeleted += RemoveCheckpoint;
+            Timeline.onCheckpointsMoved += MoveCheckpoint;
+            Timeline.onProgressChanged += UpdateProgress;
         }
         private void OnDisable()
         {
-            if (timeline == null) return;
-            timeline.onCheckpointAdded -= UpdateTimeline;
+            if (Timeline == null) return;
+            Timeline.onCheckpointsUpdated -= UpdateCheckPoints;
+            Timeline.onCheckpointAdded -= AddCheckpoint;
+            Timeline.onCheckpointInserted -= InsertCheckpoint;
+            Timeline.onCheckpointsDeleted -= RemoveCheckpoint;
+            Timeline.onCheckpointsMoved -= MoveCheckpoint;
+            Timeline.onProgressChanged -= UpdateProgress;
         }
 
         private void Start() => UpdateTimeline();
@@ -55,7 +66,38 @@ namespace SILVO.SPP
             UpdateCheckPoints();
         }
 
-        public void UpdateProgress() => UpdateLinePoints();
+
+        #region CRUD CHECKPOINT
+
+        public virtual void AddCheckpoint(Vector3 checkpoint)
+        {
+            UpdateLinePoints();
+            AddObj(transform.InverseTransformPoint(checkpoint));
+        }
+        
+        public virtual void InsertCheckpoint(int index, Vector3 checkpoint)
+        {
+            UpdateLinePoints();
+            InsertObj(index, transform.InverseTransformPoint(checkpoint));
+        }
+        
+        public virtual void RemoveCheckpoint(int index, Vector3 checkpoint)
+        {
+            UpdateLinePoints();
+            RemoveObj(index);
+        }
+        
+        public virtual void MoveCheckpoint(int index, Vector3 checkpoint)
+        {
+            UpdateLinePoints();
+            UpdateObj(index, transform.InverseTransformPoint(checkpoint));
+        }
+
+        #endregion
+        
+        
+
+        public void UpdateProgress(float progress) => UpdateLinePoints();
 
 
         #region LINE
@@ -88,30 +130,30 @@ namespace SILVO.SPP
         
         public void UpdateLinePoints()
         {
-            Vector3[] points = timeline.Checkpoints;
-            Vector3[] remaining = timeline.CheckpointsRemaining();
-            Vector3[] completed = timeline.CheckpointsCompleted();
+            List<Vector3> points = Timeline.Checkpoints;
+            Vector3[] remaining = Timeline.CheckpointsRemaining();
+            Vector3[] completed = Timeline.CheckpointsCompleted();
             
             
-            if (timeline.OnStart)
+            if (Timeline.IsOnStart)
             {
                 lrPrev.Clear();
                 lrNext.SetPoints(points);
             }
-            else if (timeline.OnEnd)
+            else if (Timeline.IsOnEnd)
             {
                 lrPrev.SetPoints(points);
                 lrNext.Clear();
             }
-            else if (timeline.OnCheckpoint)
+            else if (Timeline.IsOnCheckpoint)
             {
                 lrPrev.SetPoints(completed);
                 lrNext.SetPoints(remaining);
             }
             else
             {
-                lrPrev.SetPoints(completed.Append(timeline.CurrentPosition));
-                lrNext.SetPoints(remaining.Prepend(timeline.CurrentPosition));
+                lrPrev.SetPoints(completed.Append(Timeline.CurrentPosition));
+                lrNext.SetPoints(remaining.Prepend(Timeline.CurrentPosition));
             }
         }
 
@@ -175,9 +217,26 @@ namespace SILVO.SPP
         
         #region CHECKPOINTS
         
-        private void UpdateCheckPoints()
+        private bool showCheckpoints = false;
+        public bool ShowCheckpoints
         {
-            Vector3[] positions = timeline.Checkpoints.Select(transform.InverseTransformPoint).ToArray();
+            get => showCheckpoints;
+            set
+            {
+                showCheckpoints = value;
+                UpdateCheckPoints();
+            }
+        }
+        
+        public virtual void UpdateCheckPoints()
+        {
+            if (!showCheckpoints || Timeline.IsEmpty)
+            {
+                Clear();
+                return;
+            }
+            
+            Vector3[] positions = LocalCheckpoints;
             UpdateAllObj(positions);
         }
 
