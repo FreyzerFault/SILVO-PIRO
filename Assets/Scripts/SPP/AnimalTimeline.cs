@@ -7,6 +7,7 @@ using UnityEngine;
 
 namespace SILVO.SPP
 {
+    [ExecuteAlways]
     public class AnimalTimeline : Timeline
     {
         [SerializeField]
@@ -28,8 +29,6 @@ namespace SILVO.SPP
                 _timeline = value.ToDictionaryByDate();
                 _id = SignalsOrdered.First().id;
                 Checkpoints = _timeline.Values.Select(s => s.Position).Select(GetPositionOnTerrain).ToList();
-                Debug.Log($"Checkpoints updated with {Checkpoints.Count}\n" +
-                          $"Dictionary updated with {_timeline.Count}");
             }
         }
 

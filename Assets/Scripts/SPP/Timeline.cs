@@ -5,6 +5,7 @@ using UnityEngine;
 
 namespace SILVO.SPP
 {
+    [ExecuteAlways]
     public abstract class Timeline: MonoBehaviour
     {
         // CHECKPOINTS

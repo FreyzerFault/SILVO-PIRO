@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using DavidUtils.Editor.Rendering;
 using DavidUtils.ExtensionMethods;
+using JetBrains.Annotations;
 using SILVO.SPP;
 using UnityEditor;
 using UnityEngine;
@@ -66,25 +67,47 @@ namespace SILVO.Editor.SPP
                 return;
             }
 
-            var prefabRenderer = manager.animalTimelinePrefab.GetComponent<TimelineRenderer>();
+            var prefabRenderer = manager.animalTimelinePrefab.GetComponent<AnimalTimelineRenderer>();
             if (prefabRenderer == null)
             {
                 EditorGUILayout.HelpBox("No TimelineRenderer found in AnimalTimeline Prefab", MessageType.Error);
                 return;
             }
             
-            EditorGUI.BeginChangeCheck();
-            TimelineRendererEditor.LineRendererGUI(prefabRenderer);
-            if (EditorGUI.EndChangeCheck())
+
+            if (manager.TimelineCount > 0)
             {
-                manager.Timelines.ForEach((timeline, i) =>
+                EditorGUI.BeginChangeCheck();
+                AnimalTimelineRenderer firstTimelineRenderer = manager.Timelines.First().GetComponent<AnimalTimelineRenderer>();
+                AnimalTimelineRendererEditor.CheckpointsGUI(firstTimelineRenderer);
+
+                if (EditorGUI.EndChangeCheck())
                 {
-                    Undo.RecordObject(timeline, $"Timeline {i} Changed");
-                    timeline.Renderer.LineColor = prefabRenderer.LineColor;
-                    timeline.Renderer.LineColorCompleted = prefabRenderer.LineColorCompleted;
-                    timeline.Renderer.LineWidth = prefabRenderer.LineWidth;
-                    timeline.Renderer.LineVisible = prefabRenderer.LineVisible;
-                });
+                    manager.Timelines.ForEach((timeline, i) =>
+                    {
+                        var renderer = timeline.GetComponent<AnimalTimelineRenderer>();
+                        Undo.RecordObject(renderer, UndoName_TimelineCheckpointsChanged + $"_{i}");
+                        renderer.ShowCheckpoints = firstTimelineRenderer.ShowCheckpoints;
+                        renderer.Mode = firstTimelineRenderer.Mode;
+                        renderer.Radius = firstTimelineRenderer.Radius;
+                    });
+                }
+            
+                EditorGUILayout.Separator();
+                
+                EditorGUI.BeginChangeCheck();
+                TimelineRendererEditor.LineRendererGUI(firstTimelineRenderer);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    manager.Timelines.ForEach((timeline, i) =>
+                    {
+                        Undo.RecordObject(timeline.Renderer, UndoName_TimelineLineChanged + $"_{i}");
+                        timeline.Renderer.LineColor = firstTimelineRenderer.LineColor;
+                        timeline.Renderer.LineColorCompleted = firstTimelineRenderer.LineColorCompleted;
+                        timeline.Renderer.LineWidth = firstTimelineRenderer.LineWidth;
+                        timeline.Renderer.LineVisible = firstTimelineRenderer.LineVisible;
+                    });
+                }
             }
             
             EditorGUI.indentLevel--;
@@ -92,20 +115,31 @@ namespace SILVO.Editor.SPP
 
         
         #region UNDO
+        
+        private static string UndoName_TimelineLineChanged => "Timeline Line Changed";
+        private static string UndoName_TimelineCheckpointsChanged => "Timeline Checkpoints Changed";
 
         public Undo.UndoRedoEventCallback UndoRedoEvent => (in UndoRedoInfo undo) =>
         {
             var manager = (SPP_TimelineManager)target;
             if (manager == null || manager.Timelines.IsNullOrEmpty()) return;
 
-            bool badTag = !int.TryParse(undo.undoName.Split(" ")[1], out int index);
+            string[] tagSlices = undo.undoName.Split("_");
+            string tag = tagSlices[0];
+            bool badTag = !int.TryParse(tagSlices[1], out int index);
             if (badTag)
             {
                 Debug.LogError($"Bad Tag for Undo (without int): {undo.undoName}");
                 return;
             }
             
-            manager.Timelines[index].Renderer.UpdateLineRendererAppearance();
+            if (tag == UndoName_TimelineLineChanged)
+                manager.Timelines[index].Renderer.UpdateLineRendererAppearance();
+            else if (tag == UndoName_TimelineCheckpointsChanged)
+            {
+                manager.Timelines[index].GetComponent<AnimalTimelineRenderer>().UpdateCheckPoints();
+                manager.Timelines[index].GetComponent<AnimalTimelineRenderer>().UpdateCommonProperties();
+            }
         };
 
         private void OnEnable() => Undo.undoRedoEvent += UndoRedoEvent;

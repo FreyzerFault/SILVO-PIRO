@@ -6,6 +6,7 @@ using UnityEngine;
 
 namespace SILVO.SPP
 {
+    [ExecuteAlways]
     public class AnimalTimelineRenderer : TimelineRenderer
     {
         public AnimalTimeline AnimalTimeline
@@ -17,8 +18,8 @@ namespace SILVO.SPP
                 UpdateTimeline();
             }
         }
-
-        public Dictionary<SPP_Signal.SignalType, bool> checkpointTypeVisibility = new()
+        
+        public static Dictionary<SPP_Signal.SignalType, bool> checkpointTypeVisibility = new()
         {
             {SPP_Signal.SignalType.Seq, false},
             {SPP_Signal.SignalType.Poll, false},
@@ -27,7 +28,7 @@ namespace SILVO.SPP
             {SPP_Signal.SignalType.Unknown, false}
         };
 
-        private SPP_Signal.SignalType[] VisibleTypes =>
+        private static SPP_Signal.SignalType[] VisibleTypes =>
             checkpointTypeVisibility.Where(v => v.Value)
                 .Select(v => v.Key).ToArray();
 
@@ -49,7 +50,9 @@ namespace SILVO.SPP
                 return;
             }
             
-            // TODO Creo que no cambia los checkpoints visibles al cambiar el Disctionary
+            // Debug.Log("Updating Checkpoints\n" +
+            //           $"{VisibleCheckpoints.Length} visible checkpoints / {timeline.Checkpoints.Count}\n" +
+            //           $"{string.Join("\n", VisibleCheckpoints.Select(p => p.ToString()))}");
             UpdateAllObj(VisibleCheckpoints.Select(p => transform.InverseTransformPoint(p)));
             UpdateColorsByType();
         }

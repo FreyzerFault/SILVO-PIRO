@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using DavidUtils;
 using DavidUtils.ExtensionMethods;
 using DavidUtils.Rendering;
 using DavidUtils.Rendering.Extensions;
@@ -10,6 +11,8 @@ namespace SILVO.SPP
     [ExecuteAlways]
     public class TimelineRenderer: PointsRenderer
     {
+        private static Material LineMaterial => Resources.Load<Material>("UI/Materials/Line Material");
+        
         [SerializeField] protected Timeline timeline;
 
         public Timeline Timeline
@@ -25,8 +28,10 @@ namespace SILVO.SPP
         
         private Vector3[] LocalCheckpoints => Timeline.Checkpoints.Select(transform.InverseTransformPoint).ToArray();
 
-        protected void Awake()
+        protected override void Awake()
         {
+            base.Awake();
+            
             Mode = RenderMode.Point;
             
             InitializeLineRenderers();
@@ -66,6 +71,35 @@ namespace SILVO.SPP
             UpdateCheckPoints();
         }
 
+        
+        #region CHECKPOINTS
+        
+        [SerializeField]
+        private bool showCheckpoints = false;
+        public bool ShowCheckpoints
+        {
+            get => showCheckpoints;
+            set
+            {
+                showCheckpoints = value;
+                UpdateCheckPoints();
+            }
+        }
+        
+        public virtual void UpdateCheckPoints()
+        {
+            if (!showCheckpoints || Timeline.IsEmpty)
+            {
+                Clear();
+                return;
+            }
+            
+            Vector3[] positions = LocalCheckpoints;
+            UpdateAllObj(positions);
+        }
+
+        #endregion
+        
 
         #region CRUD CHECKPOINT
 
@@ -108,22 +142,13 @@ namespace SILVO.SPP
         public void InitializeLineRenderers()
         {
             LineRenderer[] lrs = GetComponentsInChildren<LineRenderer>();
-            lrPrev = lrs.Length > 0 ? lrs[0] : null;
-            lrNext = lrs.Length > 1 ? lrs[1] : null;
-            if (lrPrev == null)
-            {
-                GameObject lrPrevObj = new GameObject("Prev LineRenderer");
-                lrPrevObj.transform.SetParent(transform);
-                lrPrev = lrPrevObj.AddComponent<LineRenderer>();
-            }
-            else if (lrNext == null)
-            {
-                GameObject lrNextObj = new GameObject("Next LineRenderer");
-                lrNextObj.transform.SetParent(transform);
-                lrNext = lrNextObj.AddComponent<LineRenderer>();
-            }
+            lrPrev = lrs.Length > 0 ? lrs[0] : UnityUtils.InstantiateObject<LineRenderer>(transform, "Prev LineRenderer");
+            lrNext = lrs.Length > 1 ? lrs[1] : UnityUtils.InstantiateObject<LineRenderer>(transform, "Next LineRenderer");
             
-            lrNext!.material = lrPrev!.material = Resources.Load<Material>("UI/Materials/Line Material");
+            ignoredObjs.Add(lrPrev);
+            ignoredObjs.Add(lrNext);
+            
+            lrNext!.material = lrPrev!.material = LineMaterial;
             lrNext.useWorldSpace = lrPrev.useWorldSpace = true;
         }
 
@@ -215,31 +240,5 @@ namespace SILVO.SPP
         #endregion
 
         
-        #region CHECKPOINTS
-        
-        private bool showCheckpoints = false;
-        public bool ShowCheckpoints
-        {
-            get => showCheckpoints;
-            set
-            {
-                showCheckpoints = value;
-                UpdateCheckPoints();
-            }
-        }
-        
-        public virtual void UpdateCheckPoints()
-        {
-            if (!showCheckpoints || Timeline.IsEmpty)
-            {
-                Clear();
-                return;
-            }
-            
-            Vector3[] positions = LocalCheckpoints;
-            UpdateAllObj(positions);
-        }
-
-        #endregion
     }
 }

@@ -94,7 +94,8 @@ namespace SILVO.Terrain
                 case FeatureType.Point:
                 case FeatureType.Unspecified:
                 default:
-                    throw new NotImplementedException();
+                    Debug.LogError("Shapefile has an unsupported feature type", this);
+                    break;
             }
             shpComp.Shape = shp;
             return shpComp;
