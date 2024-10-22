@@ -9,8 +9,12 @@ namespace SILVO.Editor.SPP
     [CustomEditor(typeof(TimelineRenderer), true)]
     public class TimelineRendererEditor: PointsRendererEditor
     {
+        private TimelineRenderer _renderer;
+        
         private static bool timelineFoldout = true;
         private static bool checkpointsFoldout = true;
+        
+        
         
         public override void OnInspectorGUI()
         {
@@ -52,7 +56,7 @@ namespace SILVO.Editor.SPP
             bool showCheckpoints = EditorGUILayout.ToggleLeft("Show Checkpoints", renderer.ShowCheckpoints);
             if (EditorGUI.EndChangeCheck())
             {
-                Undo.RecordObject(renderer, UndoName_ShowCheckpointsChanged);
+                // Undo.RecordObject(renderer, UndoName_ShowCheckpointsChanged);
                 renderer.ShowCheckpoints = showCheckpoints;
             }
 
@@ -60,15 +64,16 @@ namespace SILVO.Editor.SPP
             
             EditorGUI.indentLevel++;
             
-            RenderModeGUI(renderer);
-            RadiusGUI(renderer);
+            // TODO
+            // InputField(serializedObject.FindProperty("renderMode"), "Render Mode", _renderer.UpdateRenderMode);
+            // InputField(serializedObject.FindProperty("radius"), "Point Radius", _renderer.UpdateRadius);
                 
             EditorGUI.BeginChangeCheck();
             var baseColor = EditorGUILayout.ColorField("Points Color", renderer.BaseColor);
             if (EditorGUI.EndChangeCheck())
             {
                 renderer.BaseColor = baseColor;
-                Undo.RecordObject(renderer, UndoName_ShowCheckpointsChanged);
+                // Undo.RecordObject(renderer, UndoName_ShowCheckpointsChanged);
             }
             
             EditorGUI.indentLevel--;     
@@ -88,7 +93,7 @@ namespace SILVO.Editor.SPP
             bool visible = EditorGUILayout.Toggle("Visible", renderer.LineVisible);
             if (EditorGUI.EndChangeCheck())
             {
-                Undo.RecordObject(renderer, UndoName_LineVisibilityChanged);
+                // Undo.RecordObject(renderer, UndoName_LineVisibilityChanged);
                 renderer.LineVisible = visible;
             }
                 
@@ -99,7 +104,7 @@ namespace SILVO.Editor.SPP
                 Color lineColorCompleted = EditorGUILayout.ColorField("Line Color when Completed", renderer.LineColorCompleted);
                 if (EditorGUI.EndChangeCheck())
                 {
-                    Undo.RecordObject(renderer, UndoName_LineColorChanged);
+                    // Undo.RecordObject(renderer, UndoName_LineColorChanged);
                     renderer.LineColor = lineColor;
                     renderer.LineColorCompleted = lineColorCompleted;
                 }
@@ -117,7 +122,7 @@ namespace SILVO.Editor.SPP
                     
                 if (EditorGUI.EndChangeCheck())
                 {
-                    Undo.RecordObject(renderer, UndoName_LineWidthChanged);
+                    // Undo.RecordObject(renderer, UndoName_LineWidthChanged);
                     renderer.LineWidth = lineWidth;
                 }
             }
@@ -128,25 +133,25 @@ namespace SILVO.Editor.SPP
         
         #region UNDO
         
-        private static string UndoName_LineVisibilityChanged => "Line Visibility Changed";
-        private static string UndoName_LineColorChanged => "Line Color Changed";
-        private static string UndoName_LineWidthChanged => "Line Width Changed";
-        protected static string UndoName_ShowCheckpointsChanged => "Show Checkpoints Changed";
-        private static string UndoName_CheckpointsBaseColorChanged => "Checkpoint Colors Changed";
-
-        public override Undo.UndoRedoEventCallback UndoRedoEvent => delegate (in UndoRedoInfo info)
-        {
-            base.UndoRedoEvent(info);
-
-            var renderer = (TimelineRenderer) target;
-            if (renderer == null) return;
-            
-            // Line Visibility not needed to be updated
-            if (info.undoName == UndoName_LineColorChanged) renderer.UpdateLineColor();
-            if (info.undoName == UndoName_LineWidthChanged) renderer.UpdateLineWidth();
-            if (info.undoName == UndoName_ShowCheckpointsChanged) renderer.UpdateCheckPoints();
-            if (info.undoName == UndoName_CheckpointsBaseColorChanged) renderer.UpdateCheckPoints();
-        };
+        // private static string UndoName_LineVisibilityChanged => "Line Visibility Changed";
+        // private static string UndoName_LineColorChanged => "Line Color Changed";
+        // private static string UndoName_LineWidthChanged => "Line Width Changed";
+        // protected static string UndoName_ShowCheckpointsChanged => "Show Checkpoints Changed";
+        // private static string UndoName_CheckpointsBaseColorChanged => "Checkpoint Colors Changed";
+        //
+        // public override Undo.UndoRedoEventCallback UndoRedoEvent => delegate (in UndoRedoInfo info)
+        // {
+        //     base.UndoRedoEvent(info);
+        //
+        //     var renderer = (TimelineRenderer) target;
+        //     if (renderer == null) return;
+        //     
+        //     // Line Visibility not needed to be updated
+        //     if (info.undoName == UndoName_LineColorChanged) renderer.UpdateLineColor();
+        //     if (info.undoName == UndoName_LineWidthChanged) renderer.UpdateLineWidth();
+        //     if (info.undoName == UndoName_ShowCheckpointsChanged) renderer.UpdateCheckPoints();
+        //     if (info.undoName == UndoName_CheckpointsBaseColorChanged) renderer.UpdateCheckPoints();
+        // };
 
         #endregion
     }

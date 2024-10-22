@@ -11,14 +11,14 @@ namespace SILVO.Terrain
     [ExecuteAlways]
     public class TerrainManager : SingletonExecuteAlways<TerrainManager>
     {
-        [SerializeField] private DEM _dem;
+        [SerializeField] private DEM dem;
 
         public DEM DEM
         {
-            get => _dem;
+            get => dem;
             set
             {
-                _dem = value;
+                dem = value;
                 UpdateDEM();
             }
         }
@@ -29,13 +29,13 @@ namespace SILVO.Terrain
         public Vector2 TerrainSize2D => new(TerrainSize.x, TerrainSize.z);
         
         public Rectangle TerrainRectangle => new(0, 0, (int)TerrainSize.x, (int)TerrainSize.z);
-        public Rectangle WorldRectangle => new(_dem.WorldOrigin.ToPoint(), _dem.WorldSize2D.ToSize());
+        public Rectangle WorldRectangle => new(dem.WorldOrigin.ToPoint(), dem.WorldSize2D.ToSize());
         
         public Extent TerrainExtents => new(Terrain.GetPosition().x, Terrain.GetPosition().y, TerrainSize.x, TerrainSize.z);
-        public Extent WorldExtents => _dem.WorldOrigin.ToExtent(_dem.WorldSize2D);
+        public Extent WorldExtents => dem.WorldOrigin.ToExtent(dem.WorldSize2D);
         
-        public Vector2 WorldOrigin => _dem.WorldOrigin;
-        public Vector2 WorldSize => _dem.WorldSize2D;
+        public Vector2 WorldOrigin => dem.WorldOrigin;
+        public Vector2 WorldSize => dem.WorldSize2D;
 
         public Action onTerrainSizeChanged;
         public Action onTerrainHeightsChanged;
@@ -55,25 +55,25 @@ namespace SILVO.Terrain
         {
             var terrain = UnityEngine.Terrain.activeTerrain;
             
-            if (_dem.IsEmpty)
+            if (dem.IsEmpty)
                 throw new Exception("No DEM data found. Try to reimport it");
             if (terrain?.terrainData == null)
                 throw new Exception("No active terrain found. Create or enable it");
             
             TerrainData tData = terrain.terrainData;
             
-            tData.heightmapResolution = _dem.resPow2;
+            tData.heightmapResolution = dem.resPow2;
 
-            if (_dem.heightDataForTerrain == null)
-                _dem.PrepareHeightDataForTerrain();
+            if (dem.heightDataForTerrain == null)
+                dem.PrepareHeightDataForTerrain();
             
-            tData.SetHeights(0,0,  _dem.heightDataForTerrain);
+            tData.SetHeights(0,0,  dem.heightDataForTerrain);
             
             // Collider
             terrain.GetComponent<TerrainCollider>().terrainData = tData;
 
             // Terrain Real Size
-            Vector3 worldSize = _dem.WorldSize;
+            Vector3 worldSize = dem.WorldSize;
             if (tData.size != worldSize)
             {
                 tData.size = worldSize;

@@ -12,40 +12,49 @@ namespace SILVO.Editor.SPP
     [CustomEditor(typeof(SPP_TimelineManager))]
     public class TimelineManagerEditor: UnityEditor.Editor, IUndoableEditor
     {
-        bool foldoutRendering = true;
+        SPP_TimelineManager _manager;
+        
+        SerializedProperty _animalTimelinePrefab;
+        
+        bool _foldoutRendering = true;
+
+        private void OnEnable()
+        {
+            _manager = (SPP_TimelineManager)target;
+            _animalTimelinePrefab = serializedObject.FindProperty("animalTimelinePrefab");
+        }
 
         public override void OnInspectorGUI()
         {
-            var manager = (SPP_TimelineManager) target;
-            if (manager == null) return;
+            if (_manager == null) return;
             
-            manager.animalTimelinePrefab = (GameObject)EditorGUILayout.ObjectField("Timeline Prefab", manager.animalTimelinePrefab, typeof(GameObject), true);
+            _manager.animalTimelinePrefab = (GameObject) EditorGUILayout.ObjectField("Timeline Prefab", _animalTimelinePrefab.objectReferenceValue, typeof(GameObject), false);
             
             EditorGUILayout.Separator();
 
-            if (manager.Signals.IsNullOrEmpty())
+            if (_manager.Signals.IsNullOrEmpty())
             {
                 if (GUILayout.Button("Load Timelines"))
-                    manager.ParseCSVFileAsync();
+                    _manager.ParseCSVFileAsync();
                 
                 return;
             }
             
-            SignalsInfoGUI(manager.csv);
+            SignalsInfoGUI(_manager.csv);
             
             EditorGUILayout.Separator();
             
-            EditorGUILayout.LabelField($"{manager.TimelineCount} Timelines Loaded", EditorStyles.largeLabel);
+            EditorGUILayout.LabelField($"{_manager.TimelineCount} Timelines Loaded", EditorStyles.largeLabel);
             
             EditorGUILayout.Separator();
             
-            if (GUILayout.Button("Update Timelines")) manager.UpdateAnimalTimelines();
-            if (GUILayout.Button("Clear Timelines")) manager.Clear();
+            if (GUILayout.Button("Update Timelines")) _manager.UpdateAnimalTimelines();
+            if (GUILayout.Button("Clear Timelines")) _manager.Clear();
             
             EditorGUILayout.Separator();
             
-            foldoutRendering = EditorGUILayout.Foldout(foldoutRendering, "Rendering", true, EditorStyles.foldoutHeader);
-            if (foldoutRendering) RenderingGUI(manager);
+            _foldoutRendering = EditorGUILayout.Foldout(_foldoutRendering, "Rendering", true, EditorStyles.foldoutHeader);
+            if (_foldoutRendering) RenderingGUI(_manager);
         }
 
         private static void SignalsInfoGUI(SPP_CSV csv)
@@ -142,8 +151,8 @@ namespace SILVO.Editor.SPP
             }
         };
 
-        private void OnEnable() => Undo.undoRedoEvent += UndoRedoEvent;
-        private void OnDisable() => Undo.undoRedoEvent -= UndoRedoEvent;
+        // private void OnEnable() => Undo.undoRedoEvent += UndoRedoEvent;
+        // private void OnDisable() => Undo.undoRedoEvent -= UndoRedoEvent;
         
         #endregion
     }

@@ -36,7 +36,7 @@ namespace SILVO.SPP
         [SerializeField] public SignalType type;
         
         public string SignalTypeLabel => signalLabel[type];
-        public string SignalTypeString => signalStr[type];
+        public string SignalTypeString => signalStr[type][0];
 
         public DateTime ReceivedDateTime => receivedTime.DateTime;
         public DateTime SentDateTime => sentTime.DateTime;
@@ -67,9 +67,9 @@ namespace SILVO.SPP
         public static SignalType[] GetTypes => Enum.GetValues(typeof(SignalType)).Cast<SignalType>().ToArray();
         
         public static SignalType GetSignalType(string typeStr) => 
-            !signalStr.ContainsValue(typeStr) 
-                ? SignalType.Unknown 
-                : signalStr.First(s => s.Value == typeStr).Key;
+            signalStr.Values.Any(strings => strings.Contains(typeStr)) 
+                ? signalStr.First(pair => pair.Value.Contains(typeStr)).Key 
+                : SignalType.Unknown;
         
         public static Color GetSignalColor(SignalType signalType) => signalColor[signalType];
         public static Color SetSignalColor(SignalType signalType, Color color) => signalColor[signalType] = color;
@@ -83,12 +83,12 @@ namespace SILVO.SPP
             {SignalType.Unknown, "Unknown"},
         };
 
-        private static Dictionary<SignalType, string> signalStr = new()
+        private static Dictionary<SignalType, string[]> signalStr = new()
         {
-            {SignalType.Seq, "seq_msg"},
-            {SignalType.Poll, "poll_msg"},
-            {SignalType.Warn, "warning_message"},
-            {SignalType.Pulse, "pulse_message"},
+            {SignalType.Seq, new []{"seq_msg", "seq_message" }},
+            {SignalType.Poll, new []{"poll_msg", "poll_message" }},
+            {SignalType.Warn, new []{"warn_msg", "warning_message" }},
+            {SignalType.Pulse, new []{"pulse_msg", "pulse_message" }},
         };
         
         private static Dictionary<SignalType, Color> signalColor = new()

@@ -46,7 +46,7 @@ namespace SILVO.Editor.SPP
             
             if (EditorGUI.EndChangeCheck())
             {
-                Undo.RecordObject(renderer, UndoName_ShowCheckpointsChanged);
+                // Undo.RecordObject(renderer, UndoName_ShowCheckpointsChanged);
                 renderer.ShowCheckpoints = showCheckpoints;
             }
 
@@ -60,8 +60,9 @@ namespace SILVO.Editor.SPP
                 
             EditorGUILayout.Separator();
                 
-            RenderModeGUI(renderer);
-            RadiusGUI(renderer);
+            // TODO
+            // InputField(serializedObject.FindProperty("renderMode"), "Render Mode", _renderer.UpdateRenderMode);
+            // InputField(serializedObject.FindProperty("radius"), "Point Radius", _renderer.UpdateRadius);
             
             EditorGUILayout.Separator();
                 
@@ -110,7 +111,7 @@ namespace SILVO.Editor.SPP
                 
                 if (EditorGUI.EndChangeCheck())
                 {
-                    Undo.RecordObject(renderer, UndoName_CheckpointsSignalColorChanged);
+                    // Undo.RecordObject(renderer, UndoName_CheckpointsSignalColorChanged);
                     SPP_Signal.SetSignalColor(type, color);
                     renderer.UpdateColor();
                 }
@@ -122,20 +123,20 @@ namespace SILVO.Editor.SPP
         
         #region UNDO
         
-        protected static string UndoName_CheckpointsSignalColorChanged => "Checkpoint Colors Changed";
-        protected static string UndoName_CheckpointsVisibilityChanged => "Checkpoint Colors Changed";
-        
-        public override Undo.UndoRedoEventCallback UndoRedoEvent => delegate (in UndoRedoInfo info)
-        {
-            base.UndoRedoEvent(info);
-
-            var renderer = (AnimalTimelineRenderer) target;
-            if (renderer == null) return;
-            
-            // Line Visibility not needed to be updated
-            if (info.undoName == UndoName_CheckpointsVisibilityChanged) renderer.UpdateCheckPoints();
-            if (info.undoName == UndoName_CheckpointsSignalColorChanged) renderer.UpdateColorsByType();
-        };
+        // protected static string UndoName_CheckpointsSignalColorChanged => "Checkpoint Colors Changed";
+        // protected static string UndoName_CheckpointsVisibilityChanged => "Checkpoint Colors Changed";
+        //
+        // public override Undo.UndoRedoEventCallback UndoRedoEvent => delegate (in UndoRedoInfo info)
+        // {
+        //     base.UndoRedoEvent(info);
+        //
+        //     var renderer = (AnimalTimelineRenderer) target;
+        //     if (renderer == null) return;
+        //     
+        //     // Line Visibility not needed to be updated
+        //     if (info.undoName == UndoName_CheckpointsVisibilityChanged) renderer.UpdateCheckPoints();
+        //     if (info.undoName == UndoName_CheckpointsSignalColorChanged) renderer.UpdateColorsByType();
+        // };
         
         #endregion
     }
