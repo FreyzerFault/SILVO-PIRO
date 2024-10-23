@@ -71,9 +71,6 @@ namespace SILVO.SPP
                 ? signalStr.First(pair => pair.Value.Contains(typeStr)).Key 
                 : SignalType.Unknown;
         
-        public static Color GetSignalColor(SignalType signalType) => signalColor[signalType];
-        public static Color SetSignalColor(SignalType signalType, Color color) => signalColor[signalType] = color;
-        
         private static Dictionary<SignalType, string> signalLabel = new()
         {
             {SignalType.Seq, "Sequence"},
@@ -89,15 +86,6 @@ namespace SILVO.SPP
             {SignalType.Poll, new []{"poll_msg", "poll_message" }},
             {SignalType.Warn, new []{"warn_msg", "warning_message" }},
             {SignalType.Pulse, new []{"pulse_msg", "pulse_message" }},
-        };
-        
-        private static Dictionary<SignalType, Color> signalColor = new()
-        {
-            {SignalType.Seq, Color.white},
-            {SignalType.Poll, Color.cyan},
-            {SignalType.Warn, Color.yellow},
-            {SignalType.Pulse, Color.red},
-            {SignalType.Unknown, Color.gray},
         };
         
         private static Dictionary<SignalType, string> signalColorStr = new()

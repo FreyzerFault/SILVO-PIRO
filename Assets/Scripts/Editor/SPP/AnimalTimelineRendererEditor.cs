@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DavidUtils.Collections;
 using DavidUtils.ExtensionMethods;
+using External_Packages.SerializableDictionary;
+using External_Packages.SerializableDictionary.Editor;
 using SILVO.SPP;
 using UnityEditor;
 using UnityEngine;
@@ -11,6 +14,11 @@ namespace SILVO.Editor.SPP
     [CustomEditor(typeof(AnimalTimelineRenderer))]
     public class AnimalTimelineRendererEditor: TimelineRendererEditor
     {
+        [CustomPropertyDrawer(typeof(AnimalTimelineRenderer.SignalTypeBoolDictionary))]
+        public class AnySerializableDictionaryPropertyDrawer :
+            SerializableDictionaryPropertyDrawer {}
+        
+        
         public override void OnInspectorGUI()
         {
             var renderer = (AnimalTimelineRenderer) target;
@@ -26,76 +34,64 @@ namespace SILVO.Editor.SPP
             
             EditorGUILayout.Separator();
             EditorGUILayout.Separator();
-            
-            CheckpointsGUI(renderer);
+
+            CheckpointsGUI(serializedObject);
             
             EditorGUILayout.Separator();
             
-            LineRendererGUI(renderer);
+            LineRendererGUI(serializedObject);
             
             EditorGUILayout.Separator();
             
             TestingGUI(renderer);
         }
 
-        public static void CheckpointsGUI(AnimalTimelineRenderer renderer)
+        public static void CheckpointsGUI(SerializedObject serializedObject)
         {
-            EditorGUI.BeginChangeCheck();
+            var renderers = serializedObject.targetObjects.Cast<AnimalTimelineRenderer>().ToArray();
+            if (renderers.IsNullOrEmpty()) return;
             
-            bool showCheckpoints = EditorGUILayout.ToggleLeft("Show Checkpoints", renderer.ShowCheckpoints);
-            
-            if (EditorGUI.EndChangeCheck())
-            {
-                // Undo.RecordObject(renderer, UndoName_ShowCheckpointsChanged);
-                renderer.ShowCheckpoints = showCheckpoints;
-            }
+            InputField_Multiple<AnimalTimelineRenderer>(
+                serializedObject,
+                "showCheckpoints",
+                "Show Checkpoints",
+                r => r.UpdateCheckPoints());
 
-            if (!showCheckpoints) return;
+            if (renderers.All(r => !r.ShowCheckpoints)) return;
             
             EditorGUILayout.Separator();
-            
+
             EditorGUI.indentLevel++;
-            
-            CheckpointVisibilityGUI(renderer);
-                
+
+            InputField_Multiple<AnimalTimelineRenderer>(
+                serializedObject,
+                "checkpointTypeVisibility",
+                "Checkpoint Visibility",
+                r => r.UpdateCheckPoints());
+
             EditorGUILayout.Separator();
-                
-            // TODO
-            // InputField(serializedObject.FindProperty("renderMode"), "Render Mode", _renderer.UpdateRenderMode);
-            // InputField(serializedObject.FindProperty("radius"), "Point Radius", _renderer.UpdateRadius);
-            
+
+            InputField_Multiple<AnimalTimelineRenderer>(
+                serializedObject,
+                "renderMode",
+                "Point Renderer",
+                r => r.UpdateRenderMode());
+            InputField_Multiple<AnimalTimelineRenderer>(
+                serializedObject,
+                "radius",
+                "Point Radius",
+                r => r.UpdateRadius());
+
             EditorGUILayout.Separator();
-                
-            CheckpointColorBySignalGUI(renderer);
-            
+
+            CheckpointColorBySignalGUI(() => renderers.ForEach(r => r.UpdateColorsByType()) );
+
             EditorGUI.indentLevel--;
         }
 
-        public static void CheckpointVisibilityGUI(AnimalTimelineRenderer renderer)
-        {
-            EditorGUILayout.LabelField("Signal Type:", EditorStyles.boldLabel);
-                
-            EditorGUILayout.Separator();
-                
-            EditorGUI.BeginChangeCheck();
-            Dictionary<SPP_Signal.SignalType, bool> visibleChanges = new (AnimalTimelineRenderer.checkpointTypeVisibility);
-            AnimalTimelineRenderer.checkpointTypeVisibility.ForEach((pair) =>
-            {
-                var type = pair.Key;
-                var visible = pair.Value;
-                visibleChanges[type] = EditorGUILayout.ToggleLeft(type.ToString(), visible);
-            });
-            if (EditorGUI.EndChangeCheck())
-            {
-                AnimalTimelineRenderer.checkpointTypeVisibility = visibleChanges;
-                renderer.UpdateCheckPoints();
-            }
-        }
-
-        public static void CheckpointColorBySignalGUI(AnimalTimelineRenderer renderer)
+        public static void CheckpointColorBySignalGUI(Action onChanged)
         {
             colorFoldout = EditorGUILayout.Foldout(colorFoldout, "Signal Colors", true, EditorStyles.foldoutHeader);
-
             if (!colorFoldout) return;
 
             EditorGUI.indentLevel++;
@@ -104,7 +100,7 @@ namespace SILVO.Editor.SPP
                 
             signalTypes.ForEach(type =>
             {
-                var color = SPP_Signal.GetSignalColor(type);
+                var color = AnimalTimelineRenderer.GetSignalColor(type);
                     
                 EditorGUI.BeginChangeCheck();
                 color = EditorGUILayout.ColorField(type.ToString(), color);
@@ -112,32 +108,12 @@ namespace SILVO.Editor.SPP
                 if (EditorGUI.EndChangeCheck())
                 {
                     // Undo.RecordObject(renderer, UndoName_CheckpointsSignalColorChanged);
-                    SPP_Signal.SetSignalColor(type, color);
-                    renderer.UpdateColor();
+                    AnimalTimelineRenderer.SetSignalColor(type, color);
+                    onChanged();
                 }
             });
                 
             EditorGUI.indentLevel--;
         }
-
-        
-        #region UNDO
-        
-        // protected static string UndoName_CheckpointsSignalColorChanged => "Checkpoint Colors Changed";
-        // protected static string UndoName_CheckpointsVisibilityChanged => "Checkpoint Colors Changed";
-        //
-        // public override Undo.UndoRedoEventCallback UndoRedoEvent => delegate (in UndoRedoInfo info)
-        // {
-        //     base.UndoRedoEvent(info);
-        //
-        //     var renderer = (AnimalTimelineRenderer) target;
-        //     if (renderer == null) return;
-        //     
-        //     // Line Visibility not needed to be updated
-        //     if (info.undoName == UndoName_CheckpointsVisibilityChanged) renderer.UpdateCheckPoints();
-        //     if (info.undoName == UndoName_CheckpointsSignalColorChanged) renderer.UpdateColorsByType();
-        // };
-        
-        #endregion
     }
 }

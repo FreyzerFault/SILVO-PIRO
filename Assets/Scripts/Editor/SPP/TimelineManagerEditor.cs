@@ -10,7 +10,7 @@ using UnityEngine;
 namespace SILVO.Editor.SPP
 {
     [CustomEditor(typeof(SPP_TimelineManager))]
-    public class TimelineManagerEditor: UnityEditor.Editor, IUndoableEditor
+    public class TimelineManagerEditor: UnityEditor.Editor
     {
         SPP_TimelineManager _manager;
         
@@ -53,8 +53,10 @@ namespace SILVO.Editor.SPP
             
             EditorGUILayout.Separator();
             
-            _foldoutRendering = EditorGUILayout.Foldout(_foldoutRendering, "Rendering", true, EditorStyles.foldoutHeader);
-            if (_foldoutRendering) RenderingGUI(_manager);
+            _foldoutRendering = EditorGUILayout.Foldout(_foldoutRendering, "RENDERING", true, EditorStyles.foldoutHeader);
+            EditorGUILayout.Separator();
+            if (_foldoutRendering) 
+                RenderingGUI(serializedObject);
         }
 
         private static void SignalsInfoGUI(SPP_CSV csv)
@@ -67,8 +69,11 @@ namespace SILVO.Editor.SPP
                 : $"Loaded {validSignals} signals and {invalidSignals} invalid signals.");
         }
 
-        private static void RenderingGUI(SPP_TimelineManager manager)
+        private static void RenderingGUI(SerializedObject serializedObject)
         {
+            var manager = serializedObject.targetObject as SPP_TimelineManager;
+            if (manager == null) return;
+            
             EditorGUI.indentLevel++;
             if (manager.TimelineCount == 0)
             {
@@ -86,74 +91,14 @@ namespace SILVO.Editor.SPP
 
             if (manager.TimelineCount > 0)
             {
-                EditorGUI.BeginChangeCheck();
-                AnimalTimelineRenderer firstTimelineRenderer = manager.Timelines.First().GetComponent<AnimalTimelineRenderer>();
-                AnimalTimelineRendererEditor.CheckpointsGUI(firstTimelineRenderer);
-
-                if (EditorGUI.EndChangeCheck())
-                {
-                    manager.Timelines.ForEach((timeline, i) =>
-                    {
-                        var renderer = timeline.GetComponent<AnimalTimelineRenderer>();
-                        Undo.RecordObject(renderer, UndoName_TimelineCheckpointsChanged + $"_{i}");
-                        renderer.ShowCheckpoints = firstTimelineRenderer.ShowCheckpoints;
-                        renderer.Mode = firstTimelineRenderer.Mode;
-                        renderer.Radius = firstTimelineRenderer.Radius;
-                    });
-                }
-            
-                EditorGUILayout.Separator();
+                var timelineSerializedObj = new SerializedObject(manager.Renderers.Cast<UnityEngine.Object>().ToArray());
                 
-                EditorGUI.BeginChangeCheck();
-                TimelineRendererEditor.LineRendererGUI(firstTimelineRenderer);
-                if (EditorGUI.EndChangeCheck())
-                {
-                    manager.Timelines.ForEach((timeline, i) =>
-                    {
-                        Undo.RecordObject(timeline.Renderer, UndoName_TimelineLineChanged + $"_{i}");
-                        timeline.Renderer.LineColor = firstTimelineRenderer.LineColor;
-                        timeline.Renderer.LineColorCompleted = firstTimelineRenderer.LineColorCompleted;
-                        timeline.Renderer.LineWidth = firstTimelineRenderer.LineWidth;
-                        timeline.Renderer.LineVisible = firstTimelineRenderer.LineVisible;
-                    });
-                }
+                AnimalTimelineRendererEditor.CheckpointsGUI(timelineSerializedObj);
+                EditorGUILayout.Separator();
+                TimelineRendererEditor.LineRendererGUI(timelineSerializedObj);
             }
             
             EditorGUI.indentLevel--;
         }
-
-        
-        #region UNDO
-        
-        private static string UndoName_TimelineLineChanged => "Timeline Line Changed";
-        private static string UndoName_TimelineCheckpointsChanged => "Timeline Checkpoints Changed";
-
-        public Undo.UndoRedoEventCallback UndoRedoEvent => (in UndoRedoInfo undo) =>
-        {
-            var manager = (SPP_TimelineManager)target;
-            if (manager == null || manager.Timelines.IsNullOrEmpty()) return;
-
-            string[] tagSlices = undo.undoName.Split("_");
-            string tag = tagSlices[0];
-            bool badTag = !int.TryParse(tagSlices[1], out int index);
-            if (badTag)
-            {
-                Debug.LogError($"Bad Tag for Undo (without int): {undo.undoName}");
-                return;
-            }
-            
-            if (tag == UndoName_TimelineLineChanged)
-                manager.Timelines[index].Renderer.UpdateLineRendererAppearance();
-            else if (tag == UndoName_TimelineCheckpointsChanged)
-            {
-                manager.Timelines[index].GetComponent<AnimalTimelineRenderer>().UpdateCheckPoints();
-                manager.Timelines[index].GetComponent<AnimalTimelineRenderer>().UpdateCommonProperties();
-            }
-        };
-
-        // private void OnEnable() => Undo.undoRedoEvent += UndoRedoEvent;
-        // private void OnDisable() => Undo.undoRedoEvent -= UndoRedoEvent;
-        
-        #endregion
     }
 }

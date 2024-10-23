@@ -147,13 +147,13 @@ namespace SILVO.SPP
             // Check Separator used
             char[] possibleSeparators = {',', ';'};
             string rawSampleLine = rawCsvLines.First().Raw.Replace(";;", "; ;").Replace(",,", ", ,");
-            Debug.Log("Searching for Separator...\n" +
-                      $"Column Count: {rawCsvLines.First().ColumnCount}" +
-                      $"After Replace Duplicate Comas:\n" +
-                      $"{rawCsvLines.First().Raw.Replace(",,", ", ,")}\n" +
-                      $"{rawCsvLines.First().Raw.Replace(";;", "; ;")}\n" +
-                      $"Repeticiones de coma: {rawSampleLine.Count(c => c == ',')}\n" +
-                      $"{rawSampleLine.Count(c => c == ';')}");
+            // Debug.Log("Searching for Separator...\n" +
+            //           $"Column Count: {rawCsvLines.First().ColumnCount}" +
+            //           $"After Replace Duplicate Comas:\n" +
+            //           $"{rawCsvLines.First().Raw.Replace(",,", ", ,")}\n" +
+            //           $"{rawCsvLines.First().Raw.Replace(";;", "; ;")}\n" +
+            //           $"Repeticiones de coma: {rawSampleLine.Count(c => c == ',')}\n" +
+            //           $"{rawSampleLine.Count(c => c == ';')}");
             char separator = possibleSeparators.First(sep => rawSampleLine.Count(c => c == sep) == rawCsvLines.First().ColumnCount - 1);
             
             csvLines = rawCsvLines.Select(line => new SPP_CsvLine(line.Raw, line.Index, separator.ToString())).ToList();

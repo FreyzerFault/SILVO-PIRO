@@ -98,6 +98,7 @@ namespace SILVO.SPP
         
         #region TIMELINES
 
+        [SerializeField]
         private List<AnimalTimeline> _timelines = new();
         public List<AnimalTimeline> Timelines
         {
@@ -144,5 +145,8 @@ namespace SILVO.SPP
         }
 
         #endregion
+        
+        
+        public TimelineRenderer[] Renderers => Timelines.Select(tl => tl.Renderer).ToArray();
     }
 }

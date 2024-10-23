@@ -5,6 +5,7 @@ using DavidUtils.ExtensionMethods;
 using DavidUtils.Rendering;
 using DavidUtils.Rendering.Extensions;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace SILVO.SPP
 {
@@ -71,7 +72,7 @@ namespace SILVO.SPP
             UpdateCheckPoints();
         }
 
-        
+
         #region CHECKPOINTS
         
         [SerializeField]
@@ -150,6 +151,9 @@ namespace SILVO.SPP
             
             lrNext!.material = lrPrev!.material = LineMaterial;
             lrNext.useWorldSpace = lrPrev.useWorldSpace = true;
+
+            lrPrev.shadowCastingMode = ShadowCastingMode.Off;
+            lrNext.shadowCastingMode = ShadowCastingMode.Off;
         }
 
         
@@ -186,6 +190,7 @@ namespace SILVO.SPP
         [SerializeField, HideInInspector] private Color lineColor = Color.white;
         [SerializeField, HideInInspector] private Color lineColorCompleted = Color.white.WithAlpha(0.5f);
         [SerializeField, HideInInspector] private float lineWidth = 1f;
+        [SerializeField, HideInInspector] private bool lineVisible = true;
 
         public Color LineColor
         {
@@ -216,11 +221,11 @@ namespace SILVO.SPP
         }
         public bool LineVisible
         {
-            get => lrPrev.enabled && lrNext.enabled;
+            get => lineVisible;
             set
-            { 
-                lrPrev.enabled = value;
-                lrNext.enabled = value;
+            {
+                lineVisible = value;
+                UpdateLineVisible();
             }
         }
         
@@ -236,9 +241,11 @@ namespace SILVO.SPP
             lrNext.startColor = lrNext.endColor = lineColor;
             lrPrev.startColor = lrPrev.endColor = lineColorCompleted;
         }
-        
+
+        public void UpdateLineVisible() => lrPrev.enabled = lrNext.enabled = lineVisible;
+
         #endregion
 
-        
+
     }
 }

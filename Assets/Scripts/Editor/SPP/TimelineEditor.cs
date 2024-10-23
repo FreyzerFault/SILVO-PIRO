@@ -54,6 +54,12 @@ namespace SILVO.Editor.SPP
             {
                 EditorGUILayout.LabelField($"ANIMAL TIMELINE [ID: {timeline.ID}]", EditorStyles.boldLabel);
                 
+                if (timeline.IsEmpty)
+                {
+                    EditorGUILayout.LabelField("Empty Timeline", EditorStyles.centeredGreyMiniLabel);
+                    return;
+                }
+                
                 EditorGUILayout.Separator();
 
                 EditorGUI.indentLevel++;

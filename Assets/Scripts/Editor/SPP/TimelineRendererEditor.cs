@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using DavidUtils.Editor.Rendering;
 using SILVO.SPP;
 using UnityEditor;
@@ -32,11 +33,11 @@ namespace SILVO.Editor.SPP
             EditorGUILayout.Separator();
             EditorGUILayout.Separator();
             
-            CheckpointsGUI(renderer);
+            CheckpointsGUI(serializedObject);
             
             EditorGUILayout.Separator();
             
-            LineRendererGUI(renderer);
+            LineRendererGUI(serializedObject);
             
             EditorGUILayout.Separator();
             
@@ -50,8 +51,11 @@ namespace SILVO.Editor.SPP
         }
         
 
-        public static void CheckpointsGUI(TimelineRenderer renderer)
+        public static void CheckpointsGUI(SerializedObject serializedObject)
         {
+            var renderer = serializedObject.targetObject as TimelineRenderer;
+            if (renderer == null) return;
+            
             EditorGUI.BeginChangeCheck();
             bool showCheckpoints = EditorGUILayout.ToggleLeft("Show Checkpoints", renderer.ShowCheckpoints);
             if (EditorGUI.EndChangeCheck())
@@ -80,79 +84,26 @@ namespace SILVO.Editor.SPP
 
         }
 
-        public static void LineRendererGUI(TimelineRenderer renderer)
+        public static void LineRendererGUI(SerializedObject serializedObject)
         {
+            TimelineRenderer[] renderers = serializedObject.targetObjects.Cast<TimelineRenderer>().ToArray();
+            
             timelineFoldout = EditorGUILayout.Foldout(timelineFoldout, "TIMELINE", true, EditorStyles.foldoutHeader);
             if (!timelineFoldout) return;
             
             EditorGUI.indentLevel++;
             
-            if (renderer.lrNext == null || renderer.lrPrev == null) renderer.InitializeLineRenderers();
+            // TODO Pudiera estar sin inicializar?
+            // if (renderers.lrNext == null || renderers.lrPrev == null) renderers.InitializeLineRenderers();
                 
-            EditorGUI.BeginChangeCheck();
-            bool visible = EditorGUILayout.Toggle("Visible", renderer.LineVisible);
-            if (EditorGUI.EndChangeCheck())
-            {
-                // Undo.RecordObject(renderer, UndoName_LineVisibilityChanged);
-                renderer.LineVisible = visible;
-            }
-                
-            // COLOR
-            {
-                EditorGUI.BeginChangeCheck();
-                Color lineColor = EditorGUILayout.ColorField("Line Color", renderer.LineColor);
-                Color lineColorCompleted = EditorGUILayout.ColorField("Line Color when Completed", renderer.LineColorCompleted);
-                if (EditorGUI.EndChangeCheck())
-                {
-                    // Undo.RecordObject(renderer, UndoName_LineColorChanged);
-                    renderer.LineColor = lineColor;
-                    renderer.LineColorCompleted = lineColorCompleted;
-                }
-            }
-                
-                
-            // WIDTH
-            {
-                EditorGUI.BeginChangeCheck();
-                    
-                float lineWidth = EditorGUILayout.Slider(
-                    "Line Width",
-                    renderer.LineWidth,
-                    0.1f, 10f);
-                    
-                if (EditorGUI.EndChangeCheck())
-                {
-                    // Undo.RecordObject(renderer, UndoName_LineWidthChanged);
-                    renderer.LineWidth = lineWidth;
-                }
-            }
+            InputField_Multiple<TimelineRenderer>(serializedObject, "lineVisible", "Visible", r => r.UpdateLineVisible());
+            InputField_Multiple<TimelineRenderer>(serializedObject, "lineColor", "Line Color", r => r.UpdateLineColor());
+            InputField_Multiple<TimelineRenderer>(serializedObject, "lineColorCompleted", "Line Color when Completed", r => r.UpdateLineColor());
+            InputField_Multiple<TimelineRenderer>(serializedObject, "lineWidth", "Line Width", r => r.UpdateLineWidth());
             
             EditorGUI.indentLevel--;
         }
         
         
-        #region UNDO
-        
-        // private static string UndoName_LineVisibilityChanged => "Line Visibility Changed";
-        // private static string UndoName_LineColorChanged => "Line Color Changed";
-        // private static string UndoName_LineWidthChanged => "Line Width Changed";
-        // protected static string UndoName_ShowCheckpointsChanged => "Show Checkpoints Changed";
-        // private static string UndoName_CheckpointsBaseColorChanged => "Checkpoint Colors Changed";
-        //
-        // public override Undo.UndoRedoEventCallback UndoRedoEvent => delegate (in UndoRedoInfo info)
-        // {
-        //     base.UndoRedoEvent(info);
-        //
-        //     var renderer = (TimelineRenderer) target;
-        //     if (renderer == null) return;
-        //     
-        //     // Line Visibility not needed to be updated
-        //     if (info.undoName == UndoName_LineColorChanged) renderer.UpdateLineColor();
-        //     if (info.undoName == UndoName_LineWidthChanged) renderer.UpdateLineWidth();
-        //     if (info.undoName == UndoName_ShowCheckpointsChanged) renderer.UpdateCheckPoints();
-        //     if (info.undoName == UndoName_CheckpointsBaseColorChanged) renderer.UpdateCheckPoints();
-        // };
-
-        #endregion
     }
 }

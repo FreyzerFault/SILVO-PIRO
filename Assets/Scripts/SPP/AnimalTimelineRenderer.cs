@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DavidUtils.Collections;
 using DavidUtils.ExtensionMethods;
+using External_Packages.SerializableDictionary;
 using UnityEngine;
+using SignalType = SILVO.SPP.SPP_Signal.SignalType;
 
 namespace SILVO.SPP
 {
@@ -19,16 +22,22 @@ namespace SILVO.SPP
             }
         }
         
-        public static Dictionary<SPP_Signal.SignalType, bool> checkpointTypeVisibility = new()
+        [Serializable]
+        public class SignalTypeBoolDictionary : SerializableDictionary<SignalType, bool>
+        {}
+        
+        
+        [SerializeField]
+        public SignalTypeBoolDictionary checkpointTypeVisibility = new()
         {
-            {SPP_Signal.SignalType.Seq, false},
-            {SPP_Signal.SignalType.Poll, false},
-            {SPP_Signal.SignalType.Warn, true},
-            {SPP_Signal.SignalType.Pulse, true},
-            {SPP_Signal.SignalType.Unknown, false}
+            {SignalType.Seq, false},
+            {SignalType.Poll, false},
+            {SignalType.Warn, true},
+            {SignalType.Pulse, true},
+            {SignalType.Unknown, false}
         };
 
-        private static SPP_Signal.SignalType[] VisibleTypes =>
+        private SignalType[] VisibleTypes =>
             checkpointTypeVisibility.Where(v => v.Value)
                 .Select(v => v.Key).ToArray();
 
@@ -36,7 +45,7 @@ namespace SILVO.SPP
             .SelectMany(type => AnimalTimeline.CheckpointsByType(type))
             .ToArray();
         
-        public void SetTypeVisible(SPP_Signal.SignalType type, bool visible)
+        public void SetTypeVisible(SignalType type, bool visible)
         {
             checkpointTypeVisibility[type] = visible;
             UpdateCheckPoints();
@@ -50,33 +59,49 @@ namespace SILVO.SPP
                 return;
             }
             
-            // Debug.Log("Updating Checkpoints\n" +
-            //           $"{VisibleCheckpoints.Length} visible checkpoints / {timeline.Checkpoints.Count}\n" +
-            //           $"{string.Join("\n", VisibleCheckpoints.Select(p => p.ToString()))}");
             UpdateAllObj(VisibleCheckpoints.Select(p => transform.InverseTransformPoint(p)));
             UpdateColorsByType();
         }
 
         #region COLORS
 
+        private static Dictionary<SignalType, Color> signalColor = new()
+        {
+            {SignalType.Seq, Color.white},
+            {SignalType.Poll, Color.cyan},
+            {SignalType.Warn, Color.yellow},
+            {SignalType.Pulse, Color.red},
+            {SignalType.Unknown, Color.gray},
+        };
+        
+        public static Color GetSignalColor(SignalType signalType) => signalColor[signalType];
+        public static Color SetSignalColor(SignalType signalType, Color color) => signalColor[signalType] = color;
+
         private Color WarnColor
         {
-            get => SPP_Signal.GetSignalColor(SPP_Signal.SignalType.Warn);
-            set => SPP_Signal.SetSignalColor(SPP_Signal.SignalType.Warn, value);
+            get => GetSignalColor(SignalType.Warn);
+            set => SetSignalColor(SignalType.Warn, value);
         }
         private Color PulseColor
         {
-            get => SPP_Signal.GetSignalColor(SPP_Signal.SignalType.Pulse);
-            set => SPP_Signal.SetSignalColor(SPP_Signal.SignalType.Pulse, value);
+            get => GetSignalColor(SignalType.Pulse);
+            set => SetSignalColor(SignalType.Pulse, value);
+        }
+
+        public override void UpdateColor()
+        {
+            UpdateColorsByType();
         }
 
         public void UpdateColorsByType()
         {
-            Colors = VisibleTypes.SelectMany(type =>
-                SPP_Signal.GetSignalColor(type)
+            colors = VisibleTypes.SelectMany(type =>
+                GetSignalColor(type)
                     .ToFilledArray(
                         AnimalTimeline.SignalsOrdered.Count(s => s.type == type)))
                 .ToArray();
+            Debug.Log($"Updating Color for {renderObjs.Count} Objects", this);
+            base.UpdateColor();
         }
         
         public override void AddCheckpoint(Vector3 checkpoint)
