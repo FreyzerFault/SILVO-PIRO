@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
+using Fields = DavidUtils.Editor.DevTools.InspectorUtilities.MyInputFields;
 
 namespace External_Packages.SerializableDictionary.Editor
 {
@@ -12,13 +13,13 @@ namespace External_Packages.SerializableDictionary.Editor
 		const string ValuesFieldName = "m_values";
 		protected const float IndentWidth = 15f;
 
-		static GUIContent s_iconPlus = IconContent ("Toolbar Plus", "Add entry");
-		static GUIContent s_iconMinus = IconContent ("Toolbar Minus", "Remove entry");
-		static GUIContent s_warningIconConflict = IconContent ("console.warnicon.sml", "Conflicting key, this entry will be lost");
-		static GUIContent s_warningIconOther = IconContent ("console.infoicon.sml", "Conflicting key");
-		static GUIContent s_warningIconNull = IconContent ("console.warnicon.sml", "Null key, this entry will be lost");
-		static GUIStyle s_buttonStyle = GUIStyle.none;
-		static GUIContent s_tempContent = new GUIContent();
+		protected static GUIContent s_iconPlus = IconContent ("Toolbar Plus", "Add entry");
+		protected static GUIContent s_iconMinus = IconContent ("Toolbar Minus", "Remove entry");
+		protected static GUIContent s_warningIconConflict = IconContent ("console.warnicon.sml", "Conflicting key, this entry will be lost");
+		protected static GUIContent s_warningIconOther = IconContent ("console.infoicon.sml", "Conflicting key");
+		protected static GUIContent s_warningIconNull = IconContent ("console.warnicon.sml", "Null key, this entry will be lost");
+		protected static GUIStyle s_buttonStyle = GUIStyle.none;
+		protected static GUIContent s_tempContent = new GUIContent();
 
 
 		class ConflictState
@@ -60,15 +61,17 @@ namespace External_Packages.SerializableDictionary.Editor
 			Action buttonAction = Action.None;
 			int buttonActionIndex = 0;
 
-			var keyArrayProperty = property.FindPropertyRelative(KeysFieldName);
-			var valueArrayProperty = property.FindPropertyRelative(ValuesFieldName);
+			SerializedProperty keyArrayProperty = property.FindPropertyRelative(KeysFieldName);
+			SerializedProperty valueArrayProperty = property.FindPropertyRelative(ValuesFieldName);
+			
+			bool isEnumKey = keyArrayProperty.isArray && keyArrayProperty.GetArrayElementAtIndex(0).propertyType is SerializedPropertyType.Enum;
 
 			ConflictState conflictState = GetConflictState(property);
 
 			if(conflictState.conflictIndex != -1)
 			{
 				keyArrayProperty.InsertArrayElementAtIndex(conflictState.conflictIndex);
-				var keyProperty = keyArrayProperty.GetArrayElementAtIndex(conflictState.conflictIndex);
+				SerializedProperty keyProperty = keyArrayProperty.GetArrayElementAtIndex(conflictState.conflictIndex);
 				SetPropertyValue(keyProperty, conflictState.conflictKey);
 				keyProperty.isExpanded = conflictState.conflictKeyPropertyExpanded;
 
@@ -93,7 +96,7 @@ namespace External_Packages.SerializableDictionary.Editor
 				buttonPosition.xMin = buttonPosition.xMax - buttonWidth;
 				buttonPosition.height = EditorGUIUtility.singleLineHeight;
 				EditorGUI.BeginDisabledGroup(conflictState.conflictIndex != -1);
-				if(GUI.Button(buttonPosition, s_iconPlus, s_buttonStyle))
+				if(!isEnumKey && GUI.Button(buttonPosition, s_iconPlus, s_buttonStyle))
 				{
 					buttonAction = Action.Add;
 					buttonActionIndex = keyArrayProperty.arraySize;
@@ -116,7 +119,7 @@ namespace External_Packages.SerializableDictionary.Editor
 					buttonPosition = linePosition;
 					buttonPosition.x = linePosition.xMax;
 					buttonPosition.height = EditorGUIUtility.singleLineHeight;
-					if(GUI.Button(buttonPosition, s_iconMinus, s_buttonStyle))
+					if(!isEnumKey && GUI.Button(buttonPosition, s_iconMinus, s_buttonStyle))
 					{
 						buttonAction = Action.Remove;
 						buttonActionIndex = i;
@@ -202,7 +205,7 @@ namespace External_Packages.SerializableDictionary.Editor
 				}
 			}
 			breakLoops:
-
+			
 			EditorGUI.EndProperty();
 		}
 
@@ -210,60 +213,53 @@ namespace External_Packages.SerializableDictionary.Editor
 		{
 			bool keyCanBeExpanded = CanPropertyBeExpanded(keyProperty);
 			bool valueCanBeExpanded = CanPropertyBeExpanded(valueProperty);
+			
+			string keyLabel = keyCanBeExpanded ? $"Key {index}" : "";
+			string valueLabel = valueCanBeExpanded ? $"Value {index}" : "";
 
-			if(!keyCanBeExpanded && valueCanBeExpanded)
-			{
-				return DrawKeyValueLineExpand(keyProperty, valueProperty, linePosition);
-			}
-			else
-			{
-				var keyLabel = keyCanBeExpanded ? ("Key " + index.ToString()) : "";
-				var valueLabel = valueCanBeExpanded ? ("Value " + index.ToString()) : "";
-				return DrawKeyValueLineSimple(keyProperty, valueProperty, keyLabel, valueLabel, linePosition);
-			}
+			return DrawKeyValueField(keyProperty, valueProperty, linePosition, !keyCanBeExpanded && valueCanBeExpanded);
 		}
 
-		static float DrawKeyValueLineSimple(SerializedProperty keyProperty, SerializedProperty valueProperty, string keyLabel, string valueLabel, Rect linePosition)
+		protected static float DrawKeyValueField(SerializedProperty keyProperty, SerializedProperty valueProperty,
+			Rect linePosition, bool expand, string keyLabel = "", string valueLabel = "")
 		{
 			float labelWidth = EditorGUIUtility.labelWidth;
 			float labelWidthRelative = labelWidth / linePosition.width;
 
 			float keyPropertyHeight = EditorGUI.GetPropertyHeight(keyProperty);
+			float valuePropertyHeight = EditorGUI.GetPropertyHeight(valueProperty);
+			
 			var keyPosition = linePosition;
 			keyPosition.height = keyPropertyHeight;
 			keyPosition.width = labelWidth - IndentWidth;
-			EditorGUIUtility.labelWidth = keyPosition.width * labelWidthRelative;
-			EditorGUI.PropertyField(keyPosition, keyProperty, TempContent(keyLabel), true);
-
-			float valuePropertyHeight = EditorGUI.GetPropertyHeight(valueProperty);
-			var valuePosition = linePosition;
-			valuePosition.height = valuePropertyHeight;
-			valuePosition.xMin += labelWidth;
-			EditorGUIUtility.labelWidth = valuePosition.width * labelWidthRelative;
-			EditorGUI.indentLevel--;
-			EditorGUI.PropertyField(valuePosition, valueProperty, TempContent(valueLabel), true);
-			EditorGUI.indentLevel++;
-
-			EditorGUIUtility.labelWidth = labelWidth;
-
-			return Mathf.Max(keyPropertyHeight, valuePropertyHeight);
-		}
-
-		static float DrawKeyValueLineExpand(SerializedProperty keyProperty, SerializedProperty valueProperty, Rect linePosition)
-		{
-			float labelWidth = EditorGUIUtility.labelWidth;
-
-			float keyPropertyHeight = EditorGUI.GetPropertyHeight(keyProperty);
-			var keyPosition = linePosition;
-			keyPosition.height = keyPropertyHeight;
-			keyPosition.width = labelWidth - IndentWidth;
-			EditorGUI.PropertyField(keyPosition, keyProperty, GUIContent.none, true);
-
-			float valuePropertyHeight = EditorGUI.GetPropertyHeight(valueProperty);
-			var valuePosition = linePosition;
-			valuePosition.height = valuePropertyHeight;
-			EditorGUI.PropertyField(valuePosition, valueProperty, GUIContent.none, true);
-
+			
+			if (!expand) EditorGUIUtility.labelWidth = keyPosition.width * labelWidthRelative;
+			
+			bool isEnumKey = keyProperty.propertyType is SerializedPropertyType.Enum;
+			
+			if (isEnumKey)
+			{
+				string enumName = keyProperty.enumDisplayNames[keyProperty.enumValueIndex];
+				Fields.InputField_Positioned(keyPosition, valueProperty, enumName, null, Fields.FieldOptions.ToggleLeft);
+			}
+			else
+			{
+				EditorGUI.PropertyField(keyPosition, keyProperty, expand ? GUIContent.none : TempContent(keyLabel), true);
+				
+				var valuePosition = linePosition;
+				valuePosition.height = valuePropertyHeight;
+				if (!expand)
+				{
+					valuePosition.xMin += labelWidth;
+					EditorGUIUtility.labelWidth = valuePosition.width * labelWidthRelative;
+					EditorGUI.indentLevel--;
+				}
+				
+				EditorGUI.PropertyField(valuePosition, valueProperty, expand ? GUIContent.none : TempContent(valueLabel), true);
+				
+				if (!expand) EditorGUI.indentLevel++;
+			}
+			
 			EditorGUIUtility.labelWidth = labelWidth;
 
 			return Mathf.Max(keyPropertyHeight, valuePropertyHeight);
@@ -550,6 +546,7 @@ namespace External_Packages.SerializableDictionary.Editor
 		}
 	}
 
+	
 	public class SerializableDictionaryStoragePropertyDrawer : PropertyDrawer
 	{
 		public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)

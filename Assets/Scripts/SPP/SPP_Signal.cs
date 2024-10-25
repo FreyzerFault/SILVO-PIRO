@@ -64,7 +64,7 @@ namespace SILVO.SPP
             $"<b>[{id}</b> <color=gray>{sentTime.FullDateStr}</color>]:\t" +
             $"<color={signalColorStr[type]}>{SignalTypeLabel}</color> at {positionLonLat}.";
 
-        public static SignalType[] GetTypes => Enum.GetValues(typeof(SignalType)).Cast<SignalType>().ToArray();
+        public static SignalType[] Types => Enum.GetValues(typeof(SignalType)).Cast<SignalType>().ToArray();
         
         public static SignalType GetSignalType(string typeStr) => 
             signalStr.Values.Any(strings => strings.Contains(typeStr)) 

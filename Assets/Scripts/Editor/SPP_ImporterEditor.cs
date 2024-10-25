@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using DavidUtils.ExtensionMethods;
@@ -7,6 +8,7 @@ using SILVO.SPP;
 using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
+using Table = DavidUtils.Editor.DevTools.InspectorUtilities.TableFields;
 
 namespace SILVO.Editor
 {
@@ -14,16 +16,36 @@ namespace SILVO.Editor
     public class SPP_ImporterEditor: ScriptedImporterEditor
     {
         private static bool _showData = true;
-        private static bool _showValidRows = false;
-        private static bool _showInvalidRows = false;
         private static int _maxCsvLinesShown = 10;
+        private static Vector2 _scrollPos = Vector2.zero;
+        
+        private enum TableDisplayOptions
+        {
+            ValidRows,
+            InvalidRows,
+            AllRows,
+            Hide
+        }
+
+        private static TableDisplayOptions _displayOption = TableDisplayOptions.ValidRows;
+        
+        // CACHE TABLE CONTENTS by CSV
+        private static Dictionary<SPP_CSV, Dictionary<TableDisplayOptions, IEnumerable<string>>> _cachedTableContents = new();
+        
+        private SPP_Importer _importer;
+        private SPP_CSV CSV => _importer.timelineManager.csv;
+
+        public override void OnEnable()
+        {
+            base.OnEnable();
+            _importer = (SPP_Importer)serializedObject.targetObject;
+        }
 
         public override void OnInspectorGUI()
         {
-            var importer = (SPP_Importer) serializedObject.targetObject;
-            if (importer == null) return;
+            if (_importer == null) return;
 
-            SPP_TimelineManager timelineManager = importer.timelineManager;
+            SPP_TimelineManager timelineManager = _importer.timelineManager;
             SPP_CSV csv = timelineManager?.csv;
             if (csv == null || csv.IsEmpty)
             {
@@ -47,7 +69,7 @@ namespace SILVO.Editor
 
         private void InfoGUI(SPP_CSV csv)
         {
-            EditorGUILayout.BeginVertical(  );
+            EditorGUILayout.BeginVertical();
             
             EditorGUILayout.LabelField($"{csv.csvLines.Count} Rows of Data", EditorStyles.boldLabel);
             
@@ -58,72 +80,53 @@ namespace SILVO.Editor
                 if (GUILayout.Button("Load CSV"))
                     csv.ParseAllSignals();
                 else
+                {
+                    EditorGUILayout.EndVertical();
                     return;
+                }
             }
             
             // TOGGLES
             {
-                _showData = EditorGUILayout.BeginToggleGroup("Show Data", _showData);
-
-                if (_showData)
-                {
-                    if (!_showValidRows && !_showInvalidRows) _showValidRows = true;
-                    _showValidRows = EditorGUILayout.Toggle("VALID Signals", _showValidRows);
-                    _showInvalidRows = EditorGUILayout.Toggle("INVALID Signals", _showInvalidRows);
-                    _showData = _showValidRows || _showInvalidRows;
-                }
+                bool showValid = EditorGUILayout.ToggleLeft("VALID Signals", _displayOption is TableDisplayOptions.ValidRows or TableDisplayOptions.AllRows);
+                bool showInvalid = EditorGUILayout.ToggleLeft("INVALID Signals", _displayOption is TableDisplayOptions.InvalidRows or TableDisplayOptions.AllRows);
                 
-                EditorGUILayout.EndToggleGroup();
+                _displayOption = showValid && showInvalid 
+                    ? TableDisplayOptions.AllRows
+                    : showValid 
+                        ? TableDisplayOptions.ValidRows
+                        : showInvalid 
+                            ? TableDisplayOptions.InvalidRows
+                            : TableDisplayOptions.Hide;
             }
 
             // LIST
-            if (_showData)
+            if (_displayOption != TableDisplayOptions.Hide)
             {
-                _maxCsvLinesShown = ExpandableList(
-                    _showValidRows && _showInvalidRows 
-                        ? csv.allLog.ToArray()
-                        : _showValidRows 
-                            ? csv.validLogs.ToArray()
-                            : csv.invalidLogs.ToArray(),
-                    _maxCsvLinesShown,
-                    csv.headerLog
-                );
+                if (!_cachedTableContents.ContainsKey(CSV)) 
+                    _cachedTableContents.Add(CSV, new Dictionary<TableDisplayOptions, IEnumerable<string>>());
+            
+                if (!_cachedTableContents[CSV].ContainsKey(_displayOption)) 
+                    _cachedTableContents[CSV].Add(
+                        _displayOption,
+                        _displayOption switch
+                        {
+                            TableDisplayOptions.AllRows => csv.allLog,
+                            TableDisplayOptions.ValidRows => csv.validLogs,
+                            TableDisplayOptions.InvalidRows => csv.invalidLogs,
+                            _ => new List<string>()
+                        });
+
+                var log = _cachedTableContents[CSV][_displayOption];
+                    
+                Table.ExpandableTable(log, ref _maxCsvLinesShown, ref _scrollPos, csv.headerLog);
             }
             
             EditorGUILayout.EndVertical();
         }
 
-        private static int ExpandableList<T>(IEnumerable<T> list, int numVisible, string header = null)
-        {
-            EditorGUILayout.BeginHorizontal(new GUIStyle { alignment = TextAnchor.MiddleLeft },
-                GUILayout.ExpandWidth(false), GUILayout.MinWidth(0));
-
-            numVisible = CounterGUI(numVisible, 10, list.Count());
-            
-            EditorGUILayout.EndHorizontal();
-
-            EditorGUILayout.Separator();
-
-            GUIContent tableContent = new GUIContent($"{header ?? ""}\n" +
-                                                     string.Join("", '-'.ToFilledArray(header?.Length ?? 20)) + "\n" +
-                                                     $"{string.Join("\n", list.Take(numVisible))}");
-            
-            float width = EditorGUIUtility.currentViewWidth - 50;
-            float size = MyFonts.SmallMonoStyle.CalcHeight(tableContent, width);
-
-            EditorGUILayout.LabelField(tableContent, MyFonts.SmallMonoStyle, GUILayout.MaxHeight(size));
-
-            return numVisible;
-        }
-
-        private static int CounterGUI(int counter, int increment, int max)
-        {
-            if (GUILayout.Button("-", GUILayout.MaxWidth(20))) counter -= increment;
-            if (GUILayout.Button("+", GUILayout.MaxWidth(20))) counter += increment;
-            EditorGUILayout.LabelField($"{counter} / {max}",
-                GUILayout.ExpandWidth(false), GUILayout.MinWidth(0));
-
-            return Mathf.Clamp(counter, 0, max);
-        }
+        
+        
+        private void ClearCache() => _cachedTableContents.Clear();
     }
 }

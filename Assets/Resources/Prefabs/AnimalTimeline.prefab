@@ -222,7 +222,7 @@ MonoBehaviour:
   textureSize: 20
   drawGizmos: 0
   timeline: {fileID: 815706692156032585}
-  showCheckpoints: 1
+  showCheckpoints: 0
   lrNext: {fileID: 2324585233397866481}
   lrPrev: {fileID: 983416084308433147}
   lineColor: {r: 1, g: 0.5026138, b: 0, a: 1}

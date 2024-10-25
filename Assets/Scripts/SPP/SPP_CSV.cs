@@ -36,9 +36,14 @@ namespace SILVO.SPP
         
         public SPP_CsvLine() : this("", -1) {}
 
-        public SPP_CsvLine(ICsvLine line) : this(line.Raw, line.Index){ }
+        public SPP_CsvLine(ICsvLine line) : this(line.Raw, line.Index)
+        {
+            raw = line.Raw;
+            index = line.Index;
+            values = line.Values;
+        }
         
-        public SPP_CsvLine(string raw, int index, string separator = ",")
+        public SPP_CsvLine(string raw, int index, char separator = ',')
         {
             this.raw = raw;
             this.index = index;
@@ -128,36 +133,24 @@ namespace SILVO.SPP
     {
         public string filePath;
 
-        [HideInInspector, SerializeField] public List<string> lines; 
+        private int maxLines = 10000;
+
         [HideInInspector, SerializeField] public List<SPP_CsvLine> csvLines;
         [HideInInspector, SerializeField] public List<SPP_CsvLine> validLines = new();
         [HideInInspector, SerializeField] public List<SPP_CsvLine> invalidLines = new();
         
         [HideInInspector, SerializeField] public List<SPP_Signal> signals = new();
 
-        public bool IsEmpty => lines.IsNullOrEmpty();
+        public bool IsEmpty => csvLines.IsNullOrEmpty();
 
-        public SPP_CSV(string csvPath)
+        public SPP_CSV(string csvPath, bool checkForSeparator = true)
         {
             filePath = csvPath;
 
             // Read RAW Lines
             var rawCsvLines = CsvReader.ReadFromText(ReadTextFile(filePath)).ToArray();
             
-            // Check Separator used
-            char[] possibleSeparators = {',', ';'};
-            string rawSampleLine = rawCsvLines.First().Raw.Replace(";;", "; ;").Replace(",,", ", ,");
-            // Debug.Log("Searching for Separator...\n" +
-            //           $"Column Count: {rawCsvLines.First().ColumnCount}" +
-            //           $"After Replace Duplicate Comas:\n" +
-            //           $"{rawCsvLines.First().Raw.Replace(",,", ", ,")}\n" +
-            //           $"{rawCsvLines.First().Raw.Replace(";;", "; ;")}\n" +
-            //           $"Repeticiones de coma: {rawSampleLine.Count(c => c == ',')}\n" +
-            //           $"{rawSampleLine.Count(c => c == ';')}");
-            char separator = possibleSeparators.First(sep => rawSampleLine.Count(c => c == sep) == rawCsvLines.First().ColumnCount - 1);
-            
-            csvLines = rawCsvLines.Select(line => new SPP_CsvLine(line.Raw, line.Index, separator.ToString())).ToList();
-            lines = csvLines.Select(l => l.ToString()).ToList();
+            csvLines = rawCsvLines.Take(maxLines).Select(line => new SPP_CsvLine(line)).ToList();
         }
         
         public SPP_Signal this[int index] => signals[index];
@@ -173,6 +166,7 @@ namespace SILVO.SPP
             
             signals = parsedSignals.Where((s) => s.Item1 != null).Select(s => s.Item1).ToList();
             
+            Debug.Log("Signals Parsed: " + signals.Count);
             UpdateLog();
             // DebugInvalidLog();
             return signals.ToArray();
@@ -244,11 +238,11 @@ namespace SILVO.SPP
         {
             line.TryParse(out bool[] badFlags);
                 
-            string badColor = "#ff4f4c", goodColor = "gray";
+            string badColor = "#ff4f4c", goodColor = "white";
 
             var values = line.values
                 .Select((v,i) => (badFlags[i] ? "NULL" : v).TruncateFixedSize(MAX_COL_CHARS[i]).Colored(badFlags[i] ? badColor : goodColor));
-
+            
             return string.Join(" | ", values);
         }
 
@@ -269,7 +263,6 @@ namespace SILVO.SPP
         public (SPP_Signal, SPP_CsvLine) ParseLine(SPP_CsvLine line)
         {
             csvLines.Add(line);
-            lines.Add(line.ToString());
             
             allLog.Add(GetLog(line));
             

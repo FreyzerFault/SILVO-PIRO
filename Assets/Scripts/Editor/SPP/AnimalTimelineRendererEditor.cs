@@ -8,6 +8,7 @@ using External_Packages.SerializableDictionary.Editor;
 using SILVO.SPP;
 using UnityEditor;
 using UnityEngine;
+using Fields = DavidUtils.Editor.DevTools.InspectorUtilities.MyInputFields;
 
 namespace SILVO.Editor.SPP
 {
@@ -51,7 +52,7 @@ namespace SILVO.Editor.SPP
             var renderers = serializedObject.targetObjects.Cast<AnimalTimelineRenderer>().ToArray();
             if (renderers.IsNullOrEmpty()) return;
             
-            InputField_Multiple<AnimalTimelineRenderer>(
+            Fields.InputField_Multiple<AnimalTimelineRenderer>(
                 serializedObject,
                 "showCheckpoints",
                 "Show Checkpoints",
@@ -62,26 +63,27 @@ namespace SILVO.Editor.SPP
             EditorGUILayout.Separator();
 
             EditorGUI.indentLevel++;
-
-            InputField_Multiple<AnimalTimelineRenderer>(
-                serializedObject,
-                "checkpointTypeVisibility",
-                "Checkpoint Visibility",
-                r => r.UpdateCheckPoints());
-
-            EditorGUILayout.Separator();
-
-            InputField_Multiple<AnimalTimelineRenderer>(
+            
+            Fields.InputField_Multiple<AnimalTimelineRenderer>(
                 serializedObject,
                 "renderMode",
                 "Point Renderer",
                 r => r.UpdateRenderMode());
-            InputField_Multiple<AnimalTimelineRenderer>(
+            Fields.InputField_Multiple<AnimalTimelineRenderer>(
                 serializedObject,
                 "radius",
                 "Point Radius",
                 r => r.UpdateRadius());
 
+            EditorGUILayout.Separator();
+            
+            Fields.InputField_Multiple<AnimalTimelineRenderer>(
+                serializedObject,
+                "checkpointTypeVisibility",
+                "Checkpoint Visibility",
+                r => r.UpdateCheckPoints(),
+                Fields.FieldOptions.ToggleLeft);
+            
             EditorGUILayout.Separator();
 
             CheckpointColorBySignalGUI(() => renderers.ForEach(r => r.UpdateColorsByType()) );
@@ -96,7 +98,7 @@ namespace SILVO.Editor.SPP
 
             EditorGUI.indentLevel++;
                 
-            SPP_Signal.SignalType[] signalTypes = SPP_Signal.GetTypes;
+            SPP_Signal.SignalType[] signalTypes = SPP_Signal.Types;
                 
             signalTypes.ForEach(type =>
             {

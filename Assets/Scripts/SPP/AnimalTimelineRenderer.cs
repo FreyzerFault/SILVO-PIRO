@@ -23,19 +23,12 @@ namespace SILVO.SPP
         }
         
         [Serializable]
-        public class SignalTypeBoolDictionary : SerializableDictionary<SignalType, bool>
+        public class SignalTypeBoolDictionary : SerializableDictionaryByEnum<SignalType, bool>
         {}
         
         
         [SerializeField]
-        public SignalTypeBoolDictionary checkpointTypeVisibility = new()
-        {
-            {SignalType.Seq, false},
-            {SignalType.Poll, false},
-            {SignalType.Warn, true},
-            {SignalType.Pulse, true},
-            {SignalType.Unknown, false}
-        };
+        public SignalTypeBoolDictionary checkpointTypeVisibility = new();
 
         private SignalType[] VisibleTypes =>
             checkpointTypeVisibility.Where(v => v.Value)
@@ -100,7 +93,6 @@ namespace SILVO.SPP
                     .ToFilledArray(
                         AnimalTimeline.SignalsOrdered.Count(s => s.type == type)))
                 .ToArray();
-            Debug.Log($"Updating Color for {renderObjs.Count} Objects", this);
             base.UpdateColor();
         }
         

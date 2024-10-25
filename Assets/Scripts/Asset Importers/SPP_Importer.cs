@@ -31,7 +31,7 @@ namespace SILVO.Asset_Importers
     [ScriptedImporter(1, "spp")]
     public class SPP_Importer : ScriptedImporter
     {
-        private bool parseOnImport = true;
+        private bool parseOnImport = false;
         
         [SerializeField]
         public SPP_TimelineManager timelineManager;

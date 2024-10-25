@@ -231,6 +231,7 @@ namespace SILVO.SPP
         
         public void UpdateLineRendererAppearance()
         {
+            UpdateLineVisible();
             UpdateLineWidth();
             UpdateLineColor();
         }

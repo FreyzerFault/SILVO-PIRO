@@ -1,9 +1,10 @@
-using System;
 using System.Linq;
 using DavidUtils.Editor.Rendering;
+using DavidUtils.ExtensionMethods;
 using SILVO.SPP;
 using UnityEditor;
 using UnityEngine;
+using Fields = DavidUtils.Editor.DevTools.InspectorUtilities.MyInputFields;
 
 namespace SILVO.Editor.SPP
 {
@@ -53,35 +54,47 @@ namespace SILVO.Editor.SPP
 
         public static void CheckpointsGUI(SerializedObject serializedObject)
         {
-            var renderer = serializedObject.targetObject as TimelineRenderer;
-            if (renderer == null) return;
-            
+            TimelineRenderer[] renderers = serializedObject.targetObjects.Cast<TimelineRenderer>().ToArray();
+            if (renderers.IsNullOrEmpty()) return;
+
+            // SHOW CHECKPOINTS
             EditorGUI.BeginChangeCheck();
-            bool showCheckpoints = EditorGUILayout.ToggleLeft("Show Checkpoints", renderer.ShowCheckpoints);
-            if (EditorGUI.EndChangeCheck())
-            {
-                // Undo.RecordObject(renderer, UndoName_ShowCheckpointsChanged);
-                renderer.ShowCheckpoints = showCheckpoints;
-            }
+            
+            bool showCheckpoints = EditorGUILayout.Toggle("Show Checkpoints", renderers.Any(r => r.ShowCheckpoints));
+            
+            if (EditorGUI.EndChangeCheck()) 
+                renderers.ForEach(r => r.ShowCheckpoints = showCheckpoints);
 
             if (!showCheckpoints) return;
             
             EditorGUI.indentLevel++;
             
-            // TODO
-            // InputField(serializedObject.FindProperty("renderMode"), "Render Mode", _renderer.UpdateRenderMode);
-            // InputField(serializedObject.FindProperty("radius"), "Point Radius", _renderer.UpdateRadius);
-                
-            EditorGUI.BeginChangeCheck();
-            var baseColor = EditorGUILayout.ColorField("Points Color", renderer.BaseColor);
-            if (EditorGUI.EndChangeCheck())
-            {
-                renderer.BaseColor = baseColor;
-                // Undo.RecordObject(renderer, UndoName_ShowCheckpointsChanged);
-            }
+            Fields.InputField_Multiple<TimelineRenderer>(
+                serializedObject,
+                "renderMode",
+                "Render Mode",
+                r => r.UpdateRenderMode());
+            
+            Fields.InputField_Multiple<TimelineRenderer>(
+                serializedObject,
+                "radius",
+                "Point Radius",
+                r => r.UpdateRadius());
+            
+            Fields.InputField_Multiple<TimelineRenderer>(
+                serializedObject,
+                "colorPaletteData",
+                "Color",
+                r => r.UpdateColor());
             
             EditorGUI.indentLevel--;     
 
+            if (Fields.UndoRedoPerformed) renderers.ForEach(r =>
+            {
+                r.UpdateRenderMode();
+                r.UpdateRadius();
+                r.UpdateColor();
+            });
         }
 
         public static void LineRendererGUI(SerializedObject serializedObject)
@@ -96,12 +109,14 @@ namespace SILVO.Editor.SPP
             // TODO Pudiera estar sin inicializar?
             // if (renderers.lrNext == null || renderers.lrPrev == null) renderers.InitializeLineRenderers();
                 
-            InputField_Multiple<TimelineRenderer>(serializedObject, "lineVisible", "Visible", r => r.UpdateLineVisible());
-            InputField_Multiple<TimelineRenderer>(serializedObject, "lineColor", "Line Color", r => r.UpdateLineColor());
-            InputField_Multiple<TimelineRenderer>(serializedObject, "lineColorCompleted", "Line Color when Completed", r => r.UpdateLineColor());
-            InputField_Multiple<TimelineRenderer>(serializedObject, "lineWidth", "Line Width", r => r.UpdateLineWidth());
+            Fields.InputField_Multiple<TimelineRenderer>(serializedObject, "lineVisible", "Visible", r => r.UpdateLineVisible());
+            Fields.InputField_Multiple<TimelineRenderer>(serializedObject, "lineColor", "Line Color", r => r.UpdateLineColor());
+            Fields.InputField_Multiple<TimelineRenderer>(serializedObject, "lineColorCompleted", "Line Color when Completed", r => r.UpdateLineColor());
+            Fields.InputField_Multiple<TimelineRenderer>(serializedObject, "lineWidth", "Line Width", r => r.UpdateLineWidth());
             
             EditorGUI.indentLevel--;
+
+            if (Fields.UndoRedoPerformed) renderers.ForEach(r => r.UpdateLineRendererAppearance());
         }
         
         

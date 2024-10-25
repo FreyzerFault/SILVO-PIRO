@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.Serialization;
 using UnityEngine;
 
@@ -82,15 +83,8 @@ namespace External_Packages.SerializableDictionary
 
 		protected SerializableDictionary(SerializationInfo info, StreamingContext context) : base(info,context){}
 
-		protected override TValue GetValue(TValue[] storage, int i)
-		{
-			return storage[i];
-		}
-
-		protected override void SetValue(TValue[] storage, int i, TValue value)
-		{
-			storage[i] = value;
-		}
+		protected override TValue GetValue(TValue[] storage, int i) => storage[i];
+		protected override void SetValue(TValue[] storage, int i, TValue value) => storage[i] = value;
 	}
 
 	public static class SerializableDictionary
@@ -113,10 +107,7 @@ namespace External_Packages.SerializableDictionary
 
 		protected SerializableDictionary(SerializationInfo info, StreamingContext context) : base(info,context){}
 
-		protected override TValue GetValue(TValueStorage[] storage, int i)
-		{
-			return storage[i].data;
-		}
+		protected override TValue GetValue(TValueStorage[] storage, int i) => storage[i].data;
 
 		protected override void SetValue(TValueStorage[] storage, int i, TValue value)
 		{
@@ -124,4 +115,30 @@ namespace External_Packages.SerializableDictionary
 			storage[i].data = value;
 		}
 	}
+
+	/// <summary>
+	///		Initializes all values to default(TValue) for all enum values
+	///		On Inspector Keys won't be editable
+	/// </summary>
+	public class SerializableDictionaryByEnum<TEnum, TValue> : SerializableDictionaryBase<TEnum, TValue, TValue> where TEnum : System.Enum
+	{
+		public SerializableDictionaryByEnum()
+		{
+			foreach (TEnum enumValue in Enum.GetValues(typeof(TEnum))) 
+				this[enumValue] = default;
+		}
+		
+		public SerializableDictionaryByEnum(IDictionary<TEnum, TValue> dict): base(dict)
+		{
+		}
+		
+		protected SerializableDictionaryByEnum(SerializationInfo info, StreamingContext context) : base(info,context){}
+		
+		protected override void SetValue(TValue[] storage, int i, TValue value) => storage[i] = value;
+		protected override TValue GetValue(TValue[] storage, int i) => storage[i];
+	}
+	
+	[Serializable]
+	public class EnumBoolDictionary : SerializableDictionaryByEnum<Enum, bool>
+	{}
 }
