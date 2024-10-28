@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using Csv;
+using DavidUtils.DevTools.Table;
 using UnityEngine;
 using DavidUtils.ExtensionMethods;
 using UnityEngine.Serialization;
@@ -14,23 +15,23 @@ namespace SILVO.SPP
     [Serializable]
     public class SPP_CsvLine : ICsvLine
     {
-        private static string[] _headers = { "time", "device_id", "msg_type", "position_time", "lat", "lon" };
+        private static string[] HEADERS = { "time", "device_id", "msg_type", "position_time", "lat", "lon" };
+        private static int[] MAX_COL_LENGHT = {20, 6, 10, 20, 10, 10};
         
-        public bool HasColumn(string name) => _headers.Contains(name);
+        public bool HasColumn(string name) => HEADERS.Contains(name);
 
         [SerializeField] public int index;
-        [SerializeField] public string raw;
         [SerializeField] public string[] values;
         
-        public string[] Headers => _headers;
+        public string[] Headers => HEADERS;
         public int ColumnCount => Headers.Length;
         public string[] Values => values;
 
-        public string Raw => raw;
+        public string Raw => string.Join(",", values.Select(v => v ?? ""));
         public int Index => index;
 
         public string this[string name] => HasColumn(name) ? this[Headers.IndexOf(name)] : "NULL";
-        public string this[int index] => index < values.Length ? values[index] : "NULL";
+        public string this[int i] => i < values.Length ? values[i] : "NULL";
         
         public bool IsValid => Index >= 0 && values.Length == ColumnCount;
         
@@ -38,14 +39,12 @@ namespace SILVO.SPP
 
         public SPP_CsvLine(ICsvLine line) : this(line.Raw, line.Index)
         {
-            raw = line.Raw;
             index = line.Index;
             values = line.Values;
         }
         
         public SPP_CsvLine(string raw, int index, char separator = ',')
         {
-            this.raw = raw;
             this.index = index;
             values = raw.Split(separator);
         }
@@ -93,7 +92,7 @@ namespace SILVO.SPP
                 var errMsg = "";
                 for (var i = 0; i < ColumnCount; i++)
                     if (badFlags[i])
-                        errMsg += $"{headerLabels[i]} is invalid: {values[i]}\n";
+                        errMsg += $"{HEADER_LABELS[i]} is invalid: {values[i]}\n";
 
                 Debug.LogWarning($"Failed to parse CSV line: {this}\n" +
                                  $"{errMsg}");
@@ -117,15 +116,25 @@ namespace SILVO.SPP
         
         #region LABELS
 
-        public static string[] headerLabels = { "Received", "ID", "Type", "Sent", "Lat", "Lon" };
+        public static string[] HEADER_LABELS = { "Received", "ID", "Type", "Sent", "Lat", "Lon" };
+        public static string HEADER_TABLE_LINE => 
+            string.Join(" | ", HEADER_LABELS.Select((label, i) => label.TruncateFixedSize(MAX_COL_LENGHT[i])));
         
-        public string GetLabel(int index) => headerLabels[index];
-        public string GetLabel(string name) => GetLabel(_headers.IndexOf(name));
+        public string GetLabel(int index) => HEADER_LABELS[index];
+        public string GetLabel(string name) => GetLabel(HEADERS.IndexOf(name));
 
         #endregion
         
         
         public override string ToString() => Raw;
+
+        public string ToTableLine(bool colorInvalid = false)
+        {
+            if (!colorInvalid) return values.ToTableLine(MAX_COL_LENGHT);
+            
+            TryParse(out bool[] badFlags);
+            return values.ToTableLine_ColoredByValidation(MAX_COL_LENGHT, badFlags);
+        }
     }
     
     [Serializable]
@@ -133,53 +142,82 @@ namespace SILVO.SPP
     {
         public string filePath;
 
-        private int maxLines = 10000;
-
-        [HideInInspector, SerializeField] public List<SPP_CsvLine> csvLines;
-        [HideInInspector, SerializeField] public List<SPP_CsvLine> validLines = new();
-        [HideInInspector, SerializeField] public List<SPP_CsvLine> invalidLines = new();
+        [HideInInspector, SerializeField] public SPP_CsvLine[] csvLines;
+        [HideInInspector, SerializeField] public int[] validLineIndices;
+        [HideInInspector, SerializeField] public int[] invalidLineIndices;
         
-        [HideInInspector, SerializeField] public List<SPP_Signal> signals = new();
+        public SPP_CsvLine[] ValidLines => csvLines?.FromIndices(validLineIndices)?.ToArray();
+        public SPP_CsvLine[] InvalidLines => csvLines?.FromIndices(invalidLineIndices)?.ToArray();
+        
+        public int LineCount => csvLines.Length;
+        
+        [HideInInspector, SerializeField] public SPP_Signal[] signals = Array.Empty<SPP_Signal>();
 
-        public bool IsEmpty => csvLines.IsNullOrEmpty();
+        public bool IsEmpty => csvLines.IsNullOrEmpty() && signals.IsNullOrEmpty();
 
-        public SPP_CSV(string csvPath, bool checkForSeparator = true)
+        public SPP_CSV(string csvPath, bool checkForSeparator = true, int maxLines = -1)
         {
             filePath = csvPath;
 
             // Read RAW Lines
             var rawCsvLines = CsvReader.ReadFromText(ReadTextFile(filePath)).ToArray();
             
-            csvLines = rawCsvLines.Take(maxLines).Select(line => new SPP_CsvLine(line)).ToList();
+            if (maxLines != -1) rawCsvLines = rawCsvLines.Take(maxLines).ToArray();
+            csvLines = rawCsvLines.Select(line => new SPP_CsvLine(line)).ToArray();
         }
         
         public SPP_Signal this[int index] => signals[index];
         
         
-        public SPP_Signal[] ParseAllSignals()
+        public SPP_Signal[] ParseAllSignals(int maxLines = -1, bool freeMemoryWhenParsed = false)
         {
-            (SPP_Signal, SPP_CsvLine)[] parsedSignals = csvLines.Select((line) => (line.TryParse(out _), line)).ToArray();
+            maxLines = Mathf.Min(maxLines, csvLines.Length);
+            if (maxLines == -1) maxLines = csvLines.Length;
+
+            List<SPP_Signal> signalsParsed = new(maxLines);
+            List<int> validLineIndicesList = new List<int>(maxLines);
+            List<int> invalidLineIndicesList = new List<int>(maxLines);
             
-            // Dividimos las lineas entre nulas y no nulas. Las no nulas son signals validas
-            validLines = parsedSignals.Where(s => s.Item1 != null).Select(s => s.Item2).ToList();
-            invalidLines = parsedSignals.Where(s => s.Item1 == null).Select(s => s.Item2).ToList();
+            for (int i = 0; i < maxLines; i++)
+            {
+                SPP_CsvLine line = csvLines[i];
+                SPP_Signal signal = line.TryParse(out _);
+                
+                if (signal == null)
+                    invalidLineIndicesList.Add(i);
+                else
+                {
+                    validLineIndicesList.Add(i);
+                    signalsParsed.Add(signal);
+                }
+            }
+
             
-            signals = parsedSignals.Where((s) => s.Item1 != null).Select(s => s.Item1).ToList();
+            validLineIndices = validLineIndicesList.ToArray();
+            invalidLineIndices = invalidLineIndicesList.ToArray();
             
-            Debug.Log("Signals Parsed: " + signals.Count);
-            UpdateLog();
             // DebugInvalidLog();
-            return signals.ToArray();
+            
+            // CLEAN MEMORY for Performance
+            if (freeMemoryWhenParsed)
+                FreeCsvMemory();
+
+            return signals = signalsParsed.ToArray();;
         }
         
 
         private void SortSignals()
         {
-            signals.Sort((a,b) =>
-            {
-                int idComparison = a.id.CompareTo(b.id);
-                return idComparison == 0 ? a.SentDateTime.CompareTo(b.SentDateTime) : idComparison;
-            });
+            var list = signals.ToList();
+            list.Sort();
+            signals = list.ToArray();
+        }
+
+        private void FreeCsvMemory()
+        {
+            csvLines = Array.Empty<SPP_CsvLine>();
+            invalidLineIndices = Array.Empty<int>();
+            validLineIndices = Array.Empty<int>();
         }
         
         
@@ -207,45 +245,31 @@ namespace SILVO.SPP
         #region LOG INFO
 
         // static int MAX_COL_CHARS = 15;
-        static int[] MAX_COL_CHARS = {20, 6, 10, 20, 10, 10};
-        static int MAX_ROWS = 10;
+        static int MAX_DEBUG_ROWS = 10;
         
-        [HideInInspector] public string headerLog;
-        [HideInInspector, SerializeField] public List<string> allLog = new();
-        [HideInInspector, SerializeField] public List<string> validLogs = new();
-        [HideInInspector, SerializeField] public List<string> invalidLogs = new();
+        public string HeaderLineColored => SPP_CsvLine.HEADER_TABLE_LINE.Colored("cyan");
 
-        public void UpdateLog()
-        {
-            headerLog = string.Join(" | ", SPP_CsvLine.headerLabels.Select((h,i) => h.TruncateFixedSize(MAX_COL_CHARS[i]))).Colored("cyan");
-            allLog = csvLines.Select(GetInvalidLog).ToList();
-            validLogs = validLines.Select(GetLog).ToList();
-            invalidLogs = invalidLines.Select(GetInvalidLog).ToList();
-        }
 
+        // TABLE FORMAT
+        public string[] GetInvalidTable(int count = -1, bool header = false, bool colorInvalid = true) =>
+            GetTable(InvalidLines, count, header, colorInvalid);
+        
+        public string[] GetValidTable(int count = -1, bool header = false, bool colorInvalid = true) => 
+            GetTable(ValidLines, count, header, colorInvalid);
+        
+        public string[] GetTable(int count = -1, bool header = false, bool colorInvalid = true) => 
+            GetTable(csvLines, count, header, colorInvalid);
+
+        public string[] GetTable(IEnumerable<SPP_CsvLine> lines, int count = -1, bool header = false, bool colorInvalid = false) => 
+            (header ? new[] {HeaderLineColored} : Array.Empty<string>()).Concat(
+                (count == -1 ? lines : lines.Take(count))
+                .Select(line => line.ToTableLine(colorInvalid)))
+            .ToArray();
+        
         private void DebugInvalidLog() =>
-            Debug.LogWarning($"{invalidLines.Count} INVALID LINES FOUND:\n".Colored("yellow") +
-                             $"{headerLog}\n" +
-                             string.Join("\n", invalidLogs.Take(MAX_ROWS)));
-
-
-        public string[] GetInvalidLogs() => invalidLines.Select(GetInvalidLog).ToArray();
-
-        public string GetLog(SPP_CsvLine line) =>
-            string.Join(" | ", line.values.Select((v, i) => $"<color=white>{v.TruncateFixedSize(MAX_COL_CHARS[i])}</color>"));
-
-        private string GetInvalidLog(SPP_CsvLine line)
-        {
-            line.TryParse(out bool[] badFlags);
-                
-            string badColor = "#ff4f4c", goodColor = "white";
-
-            var values = line.values
-                .Select((v,i) => (badFlags[i] ? "NULL" : v).TruncateFixedSize(MAX_COL_CHARS[i]).Colored(badFlags[i] ? badColor : goodColor));
-            
-            return string.Join(" | ", values);
-        }
-
+            Debug.LogWarning($"{invalidLineIndices.Length} INVALID LINES FOUND:\n".Colored("yellow") +
+                             $"{HeaderLineColored}\n" +
+                             string.Join("\n", GetInvalidTable(MAX_DEBUG_ROWS)));
         #endregion
 
 
@@ -253,31 +277,30 @@ namespace SILVO.SPP
 
         public IEnumerator ParseLinesCoroutine()
         {
-            foreach (var line in csvLines)
+            foreach (SPP_CsvLine line in csvLines)
             {
                 ParseLine(line);
                 yield return null;
             }
         }
+
+        public (SPP_Signal, SPP_CsvLine) ParseLine(int i)
+        {
+            if (i < 0 || i >= csvLines.Length) return (null, null);
+            return ParseLine(csvLines[i]);
+        } 
         
         public (SPP_Signal, SPP_CsvLine) ParseLine(SPP_CsvLine line)
         {
-            csvLines.Add(line);
-            
-            allLog.Add(GetLog(line));
-            
-            SPP_Signal signal = line.TryParse(out bool[] badFlags);
+            SPP_Signal signal = line.TryParse(out bool[] _);
                     
             if (signal != null)
             {
-                signals.Add(signal);
-                validLogs.Add(allLog[^1]);
+                signals = signals.Append(signal).ToArray();
+                validLineIndices = validLineIndices.Append(csvLines.Length - 1).ToArray();
             }
             else
-            {
-                invalidLines.Add(line);
-                invalidLogs.Add(GetInvalidLog(line));
-            }
+                invalidLineIndices = invalidLineIndices.Append(csvLines.Length - 1).ToArray();
  
             return (signal, line);
         }

@@ -8,7 +8,7 @@ using External_Packages.SerializableDictionary.Editor;
 using SILVO.SPP;
 using UnityEditor;
 using UnityEngine;
-using Fields = DavidUtils.Editor.DevTools.InspectorUtilities.MyInputFields;
+using Fields = DavidUtils.Editor.DevTools.CustomFields.MyInputFields;
 
 namespace SILVO.Editor.SPP
 {

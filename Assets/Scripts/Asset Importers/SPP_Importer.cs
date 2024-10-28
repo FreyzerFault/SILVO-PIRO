@@ -31,10 +31,14 @@ namespace SILVO.Asset_Importers
     [ScriptedImporter(1, "spp")]
     public class SPP_Importer : ScriptedImporter
     {
-        private bool parseOnImport = false;
+        private bool parseOnImport = true;
         
         [SerializeField]
         public SPP_TimelineManager timelineManager;
+        
+        
+        [SerializeField] int maxLines = 10000;
+        [SerializeField] bool freeMemoryWhenParsed = true;
         
         public override void OnImportAsset(AssetImportContext ctx)
         {
@@ -43,18 +47,19 @@ namespace SILVO.Asset_Importers
             var obj = new GameObject();
             timelineManager = obj.AddComponent<SPP_TimelineManager>();
             timelineManager.animalTimelinePrefab = Resources.Load<GameObject>("Prefabs/AnimalTimeline");
-            timelineManager.csv = new SPP_CSV(path);
-            
+            timelineManager.csv = new SPP_CSV(path, true, maxLines);
             
             if (parseOnImport)
             {
-                timelineManager.ParseCSVFile();
+                timelineManager.ParseCSVFile(maxLines, freeMemoryWhenParsed);
                 timelineManager.Timelines.ForEach(timeline => ctx.AddObjectToAsset(timeline.name, timeline.gameObject));
             }
 
             ctx.AddObjectToAsset("Timeline Manager Object", obj);
             ctx.AddObjectToAsset("Timeline Manager", timelineManager);
             ctx.SetMainObject(obj);
+            
+            Debug.Log($"Imported {path} with {timelineManager.csv.LineCount} lines => {timelineManager.Signals.Length} signals");;
         }
     }
 }

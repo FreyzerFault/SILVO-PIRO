@@ -61,9 +61,9 @@ namespace SILVO.Editor.SPP
 
         private static void SignalsInfoGUI(SPP_CSV csv)
         {
-            int validSignals = csv.validLines.Count;
-            int invalidSignals = csv.invalidLines.Count;
-            int totalSignals = csv.csvLines.Count;
+            int validSignals = csv.validLineIndices.Length;
+            int invalidSignals = csv.invalidLineIndices.Length;
+            int totalSignals = csv.LineCount;
             EditorGUILayout.LabelField(validSignals + invalidSignals < totalSignals
                 ? $"Loading {validSignals + invalidSignals} / {totalSignals} signals..."
                 : $"Loaded {validSignals} signals and {invalidSignals} invalid signals.");

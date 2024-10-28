@@ -45,8 +45,8 @@ namespace SILVO.SPP
         
         protected virtual void OnEnable()
         {
-            renderer = GetComponent<TimelineRenderer>() ?? gameObject.AddComponent<TimelineRenderer>();
-            renderer.Timeline = this;
+            _renderer = GetComponent<TimelineRenderer>() ?? gameObject.AddComponent<TimelineRenderer>();
+            _renderer.Timeline = this;
         }
 
 
@@ -151,9 +151,9 @@ namespace SILVO.SPP
         
         #region RENDERING
         
-        private TimelineRenderer renderer;
+        private new TimelineRenderer _renderer;
 
-        public TimelineRenderer Renderer => renderer ??= GetComponent<TimelineRenderer>();
+        public TimelineRenderer Renderer => _renderer ??= GetComponent<TimelineRenderer>();
         
         public bool RendererVisibility
         {

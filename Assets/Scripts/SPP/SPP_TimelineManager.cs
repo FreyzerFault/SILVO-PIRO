@@ -25,27 +25,24 @@ namespace SILVO.SPP
         [SerializeField, HideInInspector]
         public SPP_CSV csv;
         
-        public void ParseCSVFile() => Signals = csv.ParseAllSignals();
+        public void ParseCSVFile(int maxLines = -1, bool freeMemoryWhenParsed = false) => Signals = csv.ParseAllSignals(maxLines, freeMemoryWhenParsed);
         public void ParseCSVFileAsync() => StartCoroutine(ParseCSVFileCoroutine());
 
         int batchSize = 10;
         public IEnumerator ParseCSVFileCoroutine()
         {
             (SPP_Signal, SPP_CsvLine)[] batchResults = Array.Empty<(SPP_Signal, SPP_CsvLine)>();
-            for (var i = 0; i < csv.csvLines.Count; i += batchSize)
+            for (var i = 0; i < csv.csvLines.Length; i += batchSize)
             {
-                batchResults = csv.csvLines.Skip(i).Take(batchSize).Select((line) => csv.ParseLine(line)).ToArray();
+                csv.csvLines.Skip(i).Take(batchSize).Select((line) => csv.ParseLine(line));
+                
                 Signals = csv.signals.ToArray();
+                
+                Debug.Log($"Parsed lines [{i},{Math.Min(csv.LineCount, i + batchSize - 1)}]. {Signals.Length} Signals Loaded");
                 yield return null;
             }
             
             yield return null;
-            
-            // Dividimos las lineas entre validas (no nulas) e invalidas (Lineas originales de las nulas)
-            csv.signals = batchResults.Where((pair) => pair.Item1 != null).Select(pair => pair.Item1).ToList();
-            csv.invalidLines = batchResults.Where(pair => pair.Item1 == null).Select(pair => pair.Item2).ToList();
-            
-            csv.UpdateLog();
         }
 
         #endregion

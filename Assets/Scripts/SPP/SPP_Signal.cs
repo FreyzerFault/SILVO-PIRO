@@ -5,6 +5,7 @@ using DavidUtils.ExtensionMethods;
 using DotSpatial.Projections;
 using DotSpatial.Projections.ProjectedCategories;
 using DotSpatial.Projections.Transforms;
+using SILVO.GeoReferencing;
 using SILVO.Misc_Utils;
 using SILVO.Terrain;
 using UnityEngine;
@@ -12,8 +13,6 @@ using UnityEngine.Serialization;
 
 namespace SILVO.SPP
 {
-    
-    
     [Serializable]
     public class SPP_Signal: IEquatable<SPP_Signal>
     {
@@ -26,7 +25,6 @@ namespace SILVO.SPP
             Pulse,
             Unknown,
         }
-
         
         [SerializeField] public int id;
         [SerializeField] private SerializableDateTime receivedTime;
@@ -41,8 +39,16 @@ namespace SILVO.SPP
         public DateTime ReceivedDateTime => receivedTime.DateTime;
         public DateTime SentDateTime => sentTime.DateTime;
 
-        public Vector2 Position => positionUTM;
-        
+        public Vector2 Position
+        {
+            get => positionUTM;
+            set
+            {
+                positionUTM = value;
+                positionLonLat = GeoProjections.GeoProject(value, GeoProjections.Utm30NProjInfo, GeoProjections.WgsProjInfo);
+            }
+        }
+
         public SPP_Signal(int id = -1, DateTime receivedTime = default, DateTime sentTime = default, Vector2 positionLonLat = default, SignalType type = SignalType.Seq)
         {
             this.id = id;
@@ -50,12 +56,7 @@ namespace SILVO.SPP
             this.sentTime = new SerializableDateTime(sentTime);
             this.positionLonLat = positionLonLat;
             this.type = type;
-
-            ProjectionInfo wgsProjInfo = ProjectionInfo.FromEpsgCode(4326);
-            ProjectionInfo utm30NProjInfo = ProjectionInfo.FromEpsgCode(25830);
-            double[] points = { positionLonLat.x, positionLonLat.y };
-            Reproject.ReprojectPoints(points, new double[] {0}, wgsProjInfo, utm30NProjInfo, 0, 1);
-            positionUTM = new Vector2((float)points[0], (float)points[1]);
+            positionUTM = GeoProjections.GeoProject(positionLonLat, GeoProjections.WgsProjInfo, GeoProjections.Utm30NProjInfo);
         }
 
         public override string ToString() => $"[{id} - {sentTime.FullDateStr}]: {SignalTypeLabel} at {positionLonLat}.";
@@ -63,6 +64,10 @@ namespace SILVO.SPP
         public string ToFormatedString() =>
             $"<b>[{id}</b> <color=gray>{sentTime.FullDateStr}</color>]:\t" +
             $"<color={signalColorStr[type]}>{SignalTypeLabel}</color> at {positionLonLat}.";
+
+        
+
+        #region TYPES
 
         public static SignalType[] Types => Enum.GetValues(typeof(SignalType)).Cast<SignalType>().ToArray();
         
@@ -96,6 +101,9 @@ namespace SILVO.SPP
             {SignalType.Pulse, "red"},
             {SignalType.Unknown, "gray"},
         };
+
+        #endregion
+        
 
         public bool Equals(SPP_Signal other)
         {

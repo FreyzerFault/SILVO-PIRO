@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
-using Fields = DavidUtils.Editor.DevTools.InspectorUtilities.MyInputFields;
+using Fields = DavidUtils.Editor.DevTools.CustomFields.MyInputFields;
 
 namespace External_Packages.SerializableDictionary.Editor
 {

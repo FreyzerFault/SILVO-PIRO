@@ -1,21 +1,22 @@
 using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace SILVO.Misc_Utils
 {
     [Serializable]
     public class SerializableDateTime : IComparable<SerializableDateTime>
     {
-        [SerializeField] 
-        private long m_ticks;
+        [SerializeField]
+        private long ticks;
         
-        public DateTime DateTime => new(m_ticks);
+        public DateTime DateTime => new(ticks);
 
-        public SerializableDateTime(DateTime dateTime) => m_ticks = dateTime.Ticks;
+        public SerializableDateTime(DateTime dateTime) => ticks = dateTime.Ticks;
 
         public int CompareTo(SerializableDateTime other)
         {
-            return other == null ? 1 : m_ticks.CompareTo(other.m_ticks);
+            return other == null ? 1 : ticks.CompareTo(other.ticks);
         }
         
         

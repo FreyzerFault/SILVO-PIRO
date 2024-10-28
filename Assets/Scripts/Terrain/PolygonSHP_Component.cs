@@ -119,7 +119,7 @@ namespace SILVO.Terrain
 
         #region RENDERING
         
-        public PolygonRenderer renderer;
+        public new PolygonRenderer renderer;
         
         private void UpdateRenderer()
         {

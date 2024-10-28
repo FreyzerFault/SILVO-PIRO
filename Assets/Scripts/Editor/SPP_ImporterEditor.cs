@@ -1,22 +1,21 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DavidUtils.Editor.DevTools.CustomFields;
 using DavidUtils.ExtensionMethods;
-using DavidUtils.UI.Fonts;
 using SILVO.Asset_Importers;
 using SILVO.SPP;
 using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
-using Table = DavidUtils.Editor.DevTools.InspectorUtilities.TableFields;
+using Table = DavidUtils.Editor.DevTools.Table.TableFields;
 
 namespace SILVO.Editor
 {
     [CustomEditor(typeof(SPP_Importer))]
     public class SPP_ImporterEditor: ScriptedImporterEditor
     {
-        private static bool _showData = true;
-        private static int _maxCsvLinesShown = 10;
+        private static int _maxCsvLinesInTable = 10;
         private static Vector2 _scrollPos = Vector2.zero;
         
         private enum TableDisplayOptions
@@ -34,11 +33,16 @@ namespace SILVO.Editor
         
         private SPP_Importer _importer;
         private SPP_CSV CSV => _importer.timelineManager.csv;
+        
+        private SerializedProperty _maxCsvLines;
+        private SerializedProperty _freeMemoryWhenParsed;
 
         public override void OnEnable()
         {
             base.OnEnable();
             _importer = (SPP_Importer)serializedObject.targetObject;
+            _maxCsvLines = serializedObject.FindProperty("maxLines");
+            _freeMemoryWhenParsed = serializedObject.FindProperty("freeMemoryWhenParsed");
         }
 
         public override void OnInspectorGUI()
@@ -54,37 +58,41 @@ namespace SILVO.Editor
                 return;
             }
             
-            EditorGUILayout.Separator();
-            
-            // SHAPE INFO
-            InfoGUI(csv);
-            
-            EditorGUILayout.Separator();
-            EditorGUILayout.Separator();
-            
-            // serializedObject.ApplyModifiedProperties();
-            
+            // SETTINGS
+            MyInputFields.InputField(_maxCsvLines, "Max CSV Lines Parsed");
+            MyInputFields.InputField(_freeMemoryWhenParsed, "Free CSV Data after Parse");
+            serializedObject.ApplyModifiedProperties();
             ApplyRevertGUI();
-        }
-
-        private void InfoGUI(SPP_CSV csv)
-        {
-            EditorGUILayout.BeginVertical();
-            
-            EditorGUILayout.LabelField($"{csv.csvLines.Count} Rows of Data", EditorStyles.boldLabel);
             
             EditorGUILayout.Separator();
-
+            EditorGUILayout.Separator();
+            EditorGUILayout.Separator();
+            
             if (csv.signals.IsNullOrEmpty())
             {
-                if (GUILayout.Button("Load CSV"))
-                    csv.ParseAllSignals();
-                else
+                if (GUILayout.Button("Parse CSV"))
                 {
-                    EditorGUILayout.EndVertical();
-                    return;
+                    EditorGUILayout.Separator();
+                    csv.ParseAllSignals(_maxCsvLines.intValue);
+                    ClearCache();
                 }
+                else return;
             }
+            
+            EditorGUILayout.Separator();
+            
+            if (!_freeMemoryWhenParsed.boolValue && csv.LineCount != 0)
+                InfoCSVGUI(csv, _maxCsvLines.intValue);
+            
+            EditorGUILayout.Separator();
+            EditorGUILayout.Separator();
+        }
+
+        private static void InfoCSVGUI(SPP_CSV csv, int maxCsvLines = 1000)
+        {
+            EditorGUILayout.LabelField($"{csv.csvLines.Length} Rows of Data", EditorStyles.boldLabel);
+            
+            EditorGUILayout.BeginVertical();
             
             // TOGGLES
             {
@@ -103,30 +111,33 @@ namespace SILVO.Editor
             // LIST
             if (_displayOption != TableDisplayOptions.Hide)
             {
-                if (!_cachedTableContents.ContainsKey(CSV)) 
-                    _cachedTableContents.Add(CSV, new Dictionary<TableDisplayOptions, IEnumerable<string>>());
+                if (!_cachedTableContents.ContainsKey(csv)) 
+                    _cachedTableContents.Add(csv, new Dictionary<TableDisplayOptions, IEnumerable<string>>());
             
-                if (!_cachedTableContents[CSV].ContainsKey(_displayOption)) 
-                    _cachedTableContents[CSV].Add(
-                        _displayOption,
-                        _displayOption switch
-                        {
-                            TableDisplayOptions.AllRows => csv.allLog,
-                            TableDisplayOptions.ValidRows => csv.validLogs,
-                            TableDisplayOptions.InvalidRows => csv.invalidLogs,
-                            _ => new List<string>()
-                        });
-
-                var log = _cachedTableContents[CSV][_displayOption];
+                if (!_cachedTableContents[csv].ContainsKey(_displayOption)) 
+                    _cachedTableContents[csv].Add(_displayOption, GetTableLines(csv, _displayOption, maxCsvLines).Select(l => l.Colored("white")));
+                
+                var log = _cachedTableContents[csv][_displayOption];
                     
-                Table.ExpandableTable(log, ref _maxCsvLinesShown, ref _scrollPos, csv.headerLog);
+                Table.ExpandableTable(log, ref _maxCsvLinesInTable, ref _scrollPos, csv.HeaderLineColored);
             }
             
             EditorGUILayout.EndVertical();
         }
 
-        
-        
+        private static string[] GetTableLines(SPP_CSV csv, TableDisplayOptions displayOption, int numLines = -1)
+        {
+            if (numLines == -1) numLines = csv.LineCount;
+            return displayOption switch
+            {
+                TableDisplayOptions.AllRows => csv.GetTable(numLines),
+                TableDisplayOptions.ValidRows => csv.GetValidTable(numLines),
+                TableDisplayOptions.InvalidRows => csv.GetInvalidTable(numLines),
+                _ => Array.Empty<string>()
+            };
+        }
+
+
         private void ClearCache() => _cachedTableContents.Clear();
     }
 }
