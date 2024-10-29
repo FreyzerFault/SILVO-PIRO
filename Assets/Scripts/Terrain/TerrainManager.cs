@@ -5,6 +5,7 @@ using DavidUtils.ExtensionMethods;
 using DotSpatial.Data;
 using SILVO.DotSpatialExtensions;
 using UnityEngine;
+using DavidUtils.ExtensionMethods;
 
 namespace SILVO.Terrain
 {
@@ -32,9 +33,9 @@ namespace SILVO.Terrain
         public Rectangle WorldRectangle => new(dem.WorldOrigin.ToPoint(), dem.WorldSize2D.ToSize());
         
         public Extent TerrainExtents => new(Terrain.GetPosition().x, Terrain.GetPosition().y, TerrainSize.x, TerrainSize.z);
-        public Extent WorldExtents => dem.WorldOrigin.ToExtent(dem.WorldSize2D);
+        public Extent WorldExtents => WorldOrigin.ToExtent(dem.WorldSize2D);
         
-        public Vector2 WorldOrigin => dem.WorldOrigin;
+        public Vector2 WorldOrigin => new(dem.WorldOrigin.x - dem.width, dem.WorldOrigin.y);
         public Vector2 WorldSize => dem.WorldSize2D;
 
         public Action onTerrainSizeChanged;
@@ -96,8 +97,7 @@ namespace SILVO.Terrain
         public Vector2 GetRelativeTerrainPosition(Vector2 worldPosition) =>
             GetNormalizedPosition(worldPosition) * TerrainSize;
         
-        public Vector2 GetNormalizedPosition(Vector2 worldPosition) =>
-            (worldPosition - WorldOrigin) / WorldSize;
+        public Vector2 GetNormalizedPosition(Vector2 worldPosition) => (worldPosition - WorldOrigin) / WorldSize;
 
         public Vector3 GetRelativeTerrainPositionWithHeight(Vector2 worldPosition) =>
             AddHeight(GetRelativeTerrainPosition(worldPosition));

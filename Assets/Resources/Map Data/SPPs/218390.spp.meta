@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 8408587dde1ccb54da012395e1896bc0
+guid: 67fbb4b822a0d7e4695c1a277c407efd
 ScriptedImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -8,7 +8,6 @@ ScriptedImporter:
   assetBundleName: 
   assetBundleVariant: 
   script: {fileID: 11500000, guid: 01eb92e18357e1342a78191c45373741, type: 3}
-  timelineManager: {fileID: -8391025079138679183, guid: 8408587dde1ccb54da012395e1896bc0,
-    type: 3}
-  maxLines: 1000
+  timelineManager: {instanceID: 0}
+  maxLines: 10000
   freeMemoryWhenParsed: 1

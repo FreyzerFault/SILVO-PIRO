@@ -16,13 +16,11 @@ namespace SILVO.Asset_Importers
     /// (Silvo-Pastoralismo Pírico Positions)
     ///
     /// SPP file format:
-    ///   time,device_id,msg_type,position_time,lat,lon
+    ///   device_id,sent_time,received_time,msg_type,lon,lat
     ///
     /// Converts data in SPP_Signals:
-    ///  id, receivedTime, sentTime, position, type
+    ///  id, sentTime, receivedTime, type, position
     ///
-    /// time == receivedTime
-    /// position_time == sentTime
     /// position == Vector2(lon, lat)
     /// 
     /// type can be:

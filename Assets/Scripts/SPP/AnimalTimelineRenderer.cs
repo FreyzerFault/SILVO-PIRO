@@ -52,6 +52,7 @@ namespace SILVO.SPP
                 return;
             }
             
+            Debug.Log($"Visible Checkpoints: {VisibleCheckpoints.Length} / {AnimalTimeline.Checkpoints.Count}");
             UpdateAllObj(VisibleCheckpoints.Select(p => transform.InverseTransformPoint(p)));
             UpdateColorsByType();
         }

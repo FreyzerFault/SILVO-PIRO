@@ -29,7 +29,7 @@ namespace SILVO.SPP
         [SerializeField] public int id;
         [SerializeField] private SerializableDateTime receivedTime;
         [SerializeField] private SerializableDateTime sentTime;
-        [SerializeField] private Vector2 positionLonLat;
+        [FormerlySerializedAs("positionLatLon")] [SerializeField] private Vector2 positionLonLat;
         [SerializeField] private Vector2 positionUTM;
         [SerializeField] public SignalType type;
         
@@ -49,13 +49,14 @@ namespace SILVO.SPP
             }
         }
 
-        public SPP_Signal(int id = -1, DateTime receivedTime = default, DateTime sentTime = default, Vector2 positionLonLat = default, SignalType type = SignalType.Seq)
+        public SPP_Signal(int id = -1, DateTime sentTime = default, DateTime receivedTime = default,
+            SignalType type = SignalType.Seq, Vector2 positionLonLat = default)
         {
             this.id = id;
-            this.receivedTime = new SerializableDateTime(receivedTime);
             this.sentTime = new SerializableDateTime(sentTime);
-            this.positionLonLat = positionLonLat;
+            this.receivedTime = new SerializableDateTime(receivedTime);
             this.type = type;
+            this.positionLonLat = positionLonLat;
             positionUTM = GeoProjections.GeoProject(positionLonLat, GeoProjections.WgsProjInfo, GeoProjections.Utm30NProjInfo);
         }
 

@@ -15,8 +15,8 @@ namespace SILVO.SPP
     [Serializable]
     public class SPP_CsvLine : ICsvLine
     {
-        private static string[] HEADERS = { "time", "device_id", "msg_type", "position_time", "lat", "lon" };
-        private static int[] MAX_COL_LENGHT = {20, 6, 10, 20, 10, 10};
+        private static string[] HEADERS = { "device_id", "sent_time", "received_time", "msg_type", "lon", "lat" };
+        private static int[] MAX_COL_LENGHT = { 6, 20, 20, 10, 10, 10};
         
         public bool HasColumn(string name) => HEADERS.Contains(name);
 
@@ -65,18 +65,18 @@ namespace SILVO.SPP
                 Debug.LogError($"CSV line is not valid: {this}\n" +
                                $"Index: {Index} | Values: {values.Length} | Headers: {ColumnCount}");
             
-            // RECEIVED TIME
-            badFlags[0] = !DateTime.TryParse(this["time"], out DateTime receivedTime);
             
             // ID
-            badFlags[1] = !int.TryParse(this["device_id"], out int id);
+            badFlags[0] = !int.TryParse(this["device_id"], out int id);
+            
+            // TIME
+            badFlags[1] = !DateTime.TryParse(this["sent_time"], out DateTime sentTime);
+            badFlags[2] = !DateTime.TryParse(this["received_time"], out DateTime receivedTime);
             
             // TYPE
             SPP_Signal.SignalType type = SPP_Signal.GetSignalType(this["msg_type"]);
-            badFlags[2] = type == SPP_Signal.SignalType.Unknown;
+            badFlags[3] = type == SPP_Signal.SignalType.Unknown;
             
-            // SENT TIME
-            badFlags[3] = !DateTime.TryParse(this["position_time"], out DateTime sentTime);
             
             // POSITION
             badFlags[4] = !float.TryParse(this["lon"], NumberStyles.Float, new CultureInfo( "en-US"), out float lon);
@@ -84,7 +84,7 @@ namespace SILVO.SPP
             Vector2 position = new Vector2(badFlags[4] ? 0 : lon, badFlags[5] ? 0 : lat);
             
             // No sent time => EMPTY Signal. No unexpected error
-            if (this["position_time"] == "") return null;
+            if (this["sent_time"] == "") return null;
 
             // Something wrong besides the sent time => Unexpected error!!
             if (badFlags.Any(b => b))
@@ -103,11 +103,11 @@ namespace SILVO.SPP
             // Hay datos que traen la posicion escalada * 1.000.000, sin punto decimal
             // Reescalarlo dividiendo / 1.000.000
             // (383831473 => 38.3831473)
-            if (position.x > 180 || position.x < -180 || position.y > 90 || position.y < -90) 
+            if (position.x > 90 || position.x < -90 || position.y > 180 || position.y < -180) 
                 position /= 1000000;
             
             // All GOOD => Create Signal
-            return new SPP_Signal(id, receivedTime, sentTime, position, type);
+            return new SPP_Signal(id, sentTime, receivedTime, type, position);
         }
         
         #endregion
@@ -116,11 +116,11 @@ namespace SILVO.SPP
         
         #region LABELS
 
-        public static string[] HEADER_LABELS = { "Received", "ID", "Type", "Sent", "Lat", "Lon" };
-        public static string HEADER_TABLE_LINE => 
+        public static string[] HEADER_LABELS = { "ID", "Sent", "Received", "Type", "Lon", "Lat" };
+        public static string Header_Table_Line => 
             string.Join(" | ", HEADER_LABELS.Select((label, i) => label.TruncateFixedSize(MAX_COL_LENGHT[i])));
         
-        public string GetLabel(int index) => HEADER_LABELS[index];
+        public string GetLabel(int i) => HEADER_LABELS[i];
         public string GetLabel(string name) => GetLabel(HEADERS.IndexOf(name));
 
         #endregion
@@ -247,7 +247,7 @@ namespace SILVO.SPP
         // static int MAX_COL_CHARS = 15;
         static int MAX_DEBUG_ROWS = 10;
         
-        public string HeaderLineColored => SPP_CsvLine.HEADER_TABLE_LINE.Colored("cyan");
+        public string HeaderLineColored => SPP_CsvLine.Header_Table_Line.Colored("cyan");
 
 
         // TABLE FORMAT

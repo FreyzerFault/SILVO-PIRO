@@ -78,9 +78,9 @@ namespace SILVO.SPP
 
         #region TERRAIN POSITION
 
-        private Vector3 GetPositionOnTerrain(Vector2 pos) =>
+        private Vector3 GetPositionOnTerrain(Vector2 pos) => 
             TerrainManager.Instance.GetRelativeTerrainPositionWithHeight(pos);
-        
+
         #endregion
         
         

@@ -77,12 +77,15 @@ namespace SILVO.Editor.SPP
 
             EditorGUILayout.Separator();
             
+            EditorGUI.BeginChangeCheck();
             Fields.InputField_Multiple<AnimalTimelineRenderer>(
                 serializedObject,
                 "checkpointTypeVisibility",
                 "Checkpoint Visibility",
                 r => r.UpdateCheckPoints(),
                 Fields.FieldOptions.ToggleLeft);
+            if (EditorGUI.EndChangeCheck())
+                renderers.ForEach(r => r.UpdateCheckPoints());
             
             EditorGUILayout.Separator();
 
