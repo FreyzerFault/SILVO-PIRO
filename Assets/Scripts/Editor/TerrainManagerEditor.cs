@@ -10,16 +10,16 @@ namespace SILVO.Editor
     public class TerrainManagerEditor: UnityEditor.Editor
     {
         private const int PREVIEW_TEXTURE_SIZE = 128;
-        private static Dictionary<DEM, Texture2D> previewTextureCache = new();
+        private static readonly Dictionary<DEM, Texture2D> PreviewTextureCache = new();
         
         private TerrainManager _manager;
         
-        private SerializedProperty _dem;
+        private DEM _dem;
 
         private void OnEnable()
         {
             _manager = target as TerrainManager;
-            _dem = serializedObject.FindProperty("dem");
+            _dem = _manager.DEM;
         }
 
         public override void OnInspectorGUI()
@@ -27,39 +27,35 @@ namespace SILVO.Editor
             if (_manager == null) return;
             
             EditorGUILayout.LabelField("DEM Info", EditorStyles.boldLabel);
-
-            if (_dem.boxedValue is not DEM dem) return;
             
-            string filePath = dem.tiffPath;
+            string filePath = _dem.tiffPath;
             if (string.IsNullOrEmpty(filePath))
             {
                 EditorGUILayout.LabelField("No DEM loaded", EditorStyles.centeredGreyMiniLabel);
                 return;
             }
-            
-            DEM_ImporterEditor.DEM_GUI(dem);
-            
-            // TEXTURE
-            if (previewTextureCache.TryGetValue(dem, out Texture2D previewTex))
+
+            EditorGUI.indentLevel++;
             {
-                Debug.Log("FOUND");
-                DEM_ImporterEditor.DEM_GUI(dem, previewTex);
+                if (PreviewTextureCache.TryGetValue(_dem, out Texture2D previewTex))
+                {
+                    DEM_ImporterEditor.DEM_GUI(_dem, previewTex);
+                }
+                else
+                {
+                    DEM_ImporterEditor.DEM_GUI(_dem);
+
+                    EditorGUILayout.Separator();
+
+                    EditorGUILayout.LabelField("Loading Preview Texture...", EditorStyles.centeredGreyMiniLabel);
+
+                    CacheTexture(_dem);
+                }
             }
-            else
-            {
-                Debug.Log("NOT FOUND");
-                DEM_ImporterEditor.DEM_GUI(dem);
-                
-                EditorGUILayout.Separator();
-                
-                EditorGUILayout.LabelField("Loading Preview Texture...", EditorStyles.centeredGreyMiniLabel);
-                
-                CacheTexture(dem);
-            }
-            
+            EditorGUI.indentLevel--;
         }
 
         private static void CacheTexture(DEM dem) => 
-            previewTextureCache[dem] = dem.CreateLowResGreyTexture(PREVIEW_TEXTURE_SIZE);
+            PreviewTextureCache[dem] = dem.CreateLowResGreyTexture(PREVIEW_TEXTURE_SIZE);
     }
 }

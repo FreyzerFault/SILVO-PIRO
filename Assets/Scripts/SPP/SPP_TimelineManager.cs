@@ -141,6 +141,12 @@ namespace SILVO.SPP
             _timelines = new List<AnimalTimeline>();
         }
 
+        public void Reset()
+        {
+            Clear();
+            UpdateAnimalTimelines();
+        }
+
         #endregion
         
         

@@ -1,9 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using DavidUtils;
 using DavidUtils.ExtensionMethods;
 using DavidUtils.Rendering;
 using DavidUtils.Rendering.Extensions;
+using SILVO.Terrain;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -26,14 +28,21 @@ namespace SILVO.SPP
             }
         }
 
+        protected Vector3[] Checkpoints => Timeline.Checkpoints.Select(ToRenderPosition).ToArray(); 
+        protected Vector3[] CheckpointsRemaining => Timeline.CheckpointsRemaining.Select(ToRenderPosition).ToArray(); 
+        protected Vector3[] CheckpointsCompleted => Timeline.CheckpointsCompleted.Select(ToRenderPosition).ToArray(); 
+        protected Vector3 CurrentCheckpoint => ToRenderPosition(Timeline.CurrentCheckpoint); 
+        protected Vector3 CurrentPosition => ToRenderPosition(Timeline.CurrentPosition); 
         
-        private Vector3[] LocalCheckpoints => Timeline.Checkpoints.Select(transform.InverseTransformPoint).ToArray();
+        protected Vector3 ToRenderPosition(Vector3 pos) => 
+            transform.InverseTransformPoint(pos) + Vector3.up * terrainHeightOffset;
 
         protected override void Awake()
         {
             base.Awake();
             
-            Mode = RenderMode.Point;
+            terrainHeightOffset = 0.5f;
+            projectedOnTerrain = false;
             
             InitializeLineRenderers();
             
@@ -95,8 +104,7 @@ namespace SILVO.SPP
                 return;
             }
             
-            Vector3[] positions = LocalCheckpoints;
-            UpdateAllObj(positions);
+            UpdateAllObj(Checkpoints);
         }
 
         #endregion
@@ -159,31 +167,22 @@ namespace SILVO.SPP
         
         public void UpdateLinePoints()
         {
-            List<Vector3> points = Timeline.Checkpoints;
-            Vector3[] remaining = Timeline.CheckpointsRemaining();
-            Vector3[] completed = Timeline.CheckpointsCompleted();
+            Vector3[] prevPoints = CheckpointsCompleted;
+            Vector3[] nextPoints = CheckpointsRemaining;
             
+            // Add Current Position
+            if (!Timeline.IsOnCheckpoint)
+            {
+                prevPoints = prevPoints.Append(CurrentPosition).ToArray();
+                nextPoints = nextPoints.Prepend(CurrentPosition).ToArray();
+            }
             
-            if (Timeline.IsOnStart)
-            {
-                lrPrev.Clear();
-                lrNext.SetPoints(points);
-            }
-            else if (Timeline.IsOnEnd)
-            {
-                lrPrev.SetPoints(points);
-                lrNext.Clear();
-            }
-            else if (Timeline.IsOnCheckpoint)
-            {
-                lrPrev.SetPoints(completed);
-                lrNext.SetPoints(remaining);
-            }
-            else
-            {
-                lrPrev.SetPoints(completed.Append(Timeline.CurrentPosition));
-                lrNext.SetPoints(remaining.Prepend(Timeline.CurrentPosition));
-            }
+            // Divide la linea en segmentos uniformes de 1 metro como mucho para suavizar el recorrido
+            prevPoints = Terrain.ProjectPathToTerrain(prevPoints, false, terrainHeightOffset);
+            nextPoints = Terrain.ProjectPathToTerrain(nextPoints, false, terrainHeightOffset);
+            
+            lrPrev.SetPoints(nextPoints);
+            lrNext.SetPoints(prevPoints);
         }
 
         

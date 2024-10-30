@@ -6,6 +6,7 @@ using DotSpatial.Data;
 using SILVO.DotSpatialExtensions;
 using UnityEngine;
 using DavidUtils.ExtensionMethods;
+using DotSpatial.Projections;
 
 namespace SILVO.Terrain
 {
@@ -35,8 +36,10 @@ namespace SILVO.Terrain
         public Extent TerrainExtents => new(Terrain.GetPosition().x, Terrain.GetPosition().y, TerrainSize.x, TerrainSize.z);
         public Extent WorldExtents => WorldOrigin.ToExtent(dem.WorldSize2D);
         
-        public Vector2 WorldOrigin => new(dem.WorldOrigin.x - dem.width, dem.WorldOrigin.y);
+        public Vector2 WorldOrigin => dem.WorldOrigin;
         public Vector2 WorldSize => dem.WorldSize2D;
+        
+        public ProjectionInfo WorldProjection => dem.metaData.Projection;
 
         public Action onTerrainSizeChanged;
         public Action onTerrainHeightsChanged;
@@ -93,26 +96,26 @@ namespace SILVO.Terrain
         
         public Projecter GetWorldToTerrainProjecter() => new(WorldExtents, TerrainRectangle);
         public Projecter GetTerrainToWorldProjecter() => new(TerrainExtents, WorldRectangle);
-
-        public Vector2 GetRelativeTerrainPosition(Vector2 worldPosition) =>
-            GetNormalizedPosition(worldPosition) * TerrainSize;
         
-        public Vector2 GetNormalizedPosition(Vector2 worldPosition) => (worldPosition - WorldOrigin) / WorldSize;
+        public Vector2 GetNormalizedPosition(Vector2 pos) => pos / TerrainSize2D;
+        public Vector2 GetNormalizedPosition_World(Vector2 worldPosition) => worldPosition / WorldSize;
 
-        public Vector3 GetRelativeTerrainPositionWithHeight(Vector2 worldPosition) =>
-            AddHeight(GetRelativeTerrainPosition(worldPosition));
+        public Vector2 WorldToTerrainPosition(Vector2 worldPosition) => worldPosition - WorldOrigin;
+        public Vector2 TerrainToWorldPosition(Vector2 terrainPos) => terrainPos + WorldOrigin;
 
         #endregion
 
 
         #region HEIGHTS
 
+        public Vector3 WorldToTerrain3D(Vector2 worldPosition) => 
+            AddHeight(WorldToTerrainPosition(worldPosition));
 
-        public Vector3 AddHeight(Vector2 terrainPos) =>
-            terrainPos.ToV3xz().WithY(GetInterpolatedHeight(terrainPos));
+        public Vector3 AddHeight(Vector2 pos) =>
+            pos.ToV3xz().WithY(GetInterpolatedHeight(pos));
 
-        public float GetInterpolatedHeight(Vector2 worldPosition) =>
-            Terrain.GetInterpolatedHeight(GetNormalizedPosition(worldPosition));
+        public float GetInterpolatedHeight(Vector2 pos) => 
+            Terrain.GetInterpolatedHeight(GetNormalizedPosition(pos));
 
         #endregion
     }

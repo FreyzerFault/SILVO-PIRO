@@ -1,0 +1,13 @@
+fileFormatVersion: 2
+guid: dfbd023b6cb65354eb8888220bb8beff
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: 01eb92e18357e1342a78191c45373741, type: 3}
+  timelineManager: {instanceID: 0}
+  maxLines: 10000
+  freeMemoryWhenParsed: 1

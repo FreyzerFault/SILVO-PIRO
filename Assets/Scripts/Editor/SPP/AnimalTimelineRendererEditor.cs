@@ -44,10 +44,14 @@ namespace SILVO.Editor.SPP
             
             EditorGUILayout.Separator();
             
+            CommonPropsGUI(serializedObject);
+            
+            EditorGUILayout.Separator();
+            
             TestingGUI(renderer);
         }
 
-        public static void CheckpointsGUI(SerializedObject serializedObject)
+        public new static void CheckpointsGUI(SerializedObject serializedObject)
         {
             var renderers = serializedObject.targetObjects.Cast<AnimalTimelineRenderer>().ToArray();
             if (renderers.IsNullOrEmpty()) return;

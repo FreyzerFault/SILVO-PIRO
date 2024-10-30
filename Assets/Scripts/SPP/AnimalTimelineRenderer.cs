@@ -36,6 +36,7 @@ namespace SILVO.SPP
 
         private Vector3[] VisibleCheckpoints => VisibleTypes
             .SelectMany(type => AnimalTimeline.CheckpointsByType(type))
+            .Select(ToRenderPosition)
             .ToArray();
         
         public void SetTypeVisible(SignalType type, bool visible)
@@ -52,8 +53,7 @@ namespace SILVO.SPP
                 return;
             }
             
-            Debug.Log($"Visible Checkpoints: {VisibleCheckpoints.Length} / {AnimalTimeline.Checkpoints.Count}");
-            UpdateAllObj(VisibleCheckpoints.Select(p => transform.InverseTransformPoint(p)));
+            UpdateAllObj(VisibleCheckpoints);
             UpdateColorsByType();
         }
 

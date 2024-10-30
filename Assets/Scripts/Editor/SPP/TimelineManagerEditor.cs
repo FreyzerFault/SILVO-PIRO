@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using DavidUtils.Editor.DevTools.CustomFields;
 using DavidUtils.Editor.Rendering;
 using DavidUtils.ExtensionMethods;
 using JetBrains.Annotations;
@@ -9,10 +10,11 @@ using UnityEngine;
 
 namespace SILVO.Editor.SPP
 {
-    [CustomEditor(typeof(SPP_TimelineManager))]
+    [CustomEditor(typeof(SPP_TimelineManager)), CanEditMultipleObjects]
     public class TimelineManagerEditor: UnityEditor.Editor
     {
         SPP_TimelineManager _manager;
+        SPP_TimelineManager[] _managers;
         
         SerializedProperty _animalTimelinePrefab;
         
@@ -21,6 +23,7 @@ namespace SILVO.Editor.SPP
         private void OnEnable()
         {
             _manager = (SPP_TimelineManager)target;
+            _managers = targets.Cast<SPP_TimelineManager>().ToArray();
             _animalTimelinePrefab = serializedObject.FindProperty("animalTimelinePrefab");
         }
 
@@ -28,29 +31,58 @@ namespace SILVO.Editor.SPP
         {
             if (_manager == null) return;
             
-            _manager.animalTimelinePrefab = (GameObject) EditorGUILayout.ObjectField("Timeline Prefab", _animalTimelinePrefab.objectReferenceValue, typeof(GameObject), false);
+            MyInputFields.InputField_Multiple<SPP_TimelineManager>(
+                serializedObject,
+                "animalTimelinePrefab",
+                "Timeline Prefab",
+                manager => manager.Reset());
             
             EditorGUILayout.Separator();
-
-            if (_manager.Signals.IsNullOrEmpty())
+            
+            // Check if SIGNALS are Loaded => if not => BUTTON to Load SIGNALS
             {
-                if (GUILayout.Button("Load Timelines"))
-                    _manager.ParseCSVFileAsync();
-                
-                return;
+                if (serializedObject.isEditingMultipleObjects && _managers.Any(m => m.Signals.IsNullOrEmpty()))
+                {
+                    if (GUILayout.Button("Load Timelines"))
+                        _managers.ForEach(m => m.ParseCSVFileAsync());
+                    else
+                        return;
+                }
+                else if (_manager.Signals.IsNullOrEmpty())
+                {
+                    if (GUILayout.Button("Load Timelines"))
+                        _manager.ParseCSVFileAsync();
+                    else
+                        return;
+                }
             }
             
-            SignalsInfoGUI(_manager.csv);
-            
+            if (!serializedObject.isEditingMultipleObjects)
+                SignalsInfoGUI(_manager);
+            else
+                SignalsInfoGUI(_managers);
+
             EditorGUILayout.Separator();
-            
-            EditorGUILayout.LabelField($"{_manager.TimelineCount} Timelines Loaded", EditorStyles.largeLabel);
-            
             EditorGUILayout.Separator();
-            
-            if (GUILayout.Button("Update Timelines")) _manager.UpdateAnimalTimelines();
-            if (GUILayout.Button("Clear Timelines")) _manager.Clear();
-            
+
+            // BUTTONS
+            {
+                if (GUILayout.Button("Update Timelines"))
+                {
+                    if (serializedObject.isEditingMultipleObjects)
+                        _managers.ForEach(m => m.Reset());
+                    else
+                        _manager.Reset();
+                }
+
+                if (GUILayout.Button("Clear Timelines"))
+                {
+                    if (serializedObject.isEditingMultipleObjects)
+                        _managers.ForEach(m => m.Clear());
+                    else
+                        _manager.Reset();
+                }
+            }
             EditorGUILayout.Separator();
             
             _foldoutRendering = EditorGUILayout.Foldout(_foldoutRendering, "RENDERING", true, EditorStyles.foldoutHeader);
@@ -59,14 +91,26 @@ namespace SILVO.Editor.SPP
                 RenderingGUI(serializedObject);
         }
 
-        private static void SignalsInfoGUI(SPP_CSV csv)
+
+        private static void SignalsInfoGUI(SPP_TimelineManager[] managers) => 
+            EditorGUILayout.LabelField($"{managers.Sum(m => m.TimelineCount)} Timelines Loaded",
+                EditorStyles.largeLabel);
+
+        private static void SignalsInfoGUI(SPP_TimelineManager manager)
         {
-            int validSignals = csv.validLineIndices.Length;
-            int invalidSignals = csv.invalidLineIndices.Length;
-            int totalSignals = csv.LineCount;
-            EditorGUILayout.LabelField(validSignals + invalidSignals < totalSignals
-                ? $"Loading {validSignals + invalidSignals} / {totalSignals} signals..."
-                : $"Loaded {validSignals} signals and {invalidSignals} invalid signals.");
+            EditorGUI.indentLevel++;
+            
+            EditorGUILayout.LabelField($"{manager.TimelineCount} Timelines Loaded", EditorStyles.largeLabel);
+            
+            EditorGUILayout.Separator();
+            
+            manager.Timelines.ForEach(tl =>
+            {
+                EditorGUILayout.LabelField($"Timeline {tl.ID} - {tl.Signals.Length} Signals");
+                EditorGUILayout.LabelField($"[{tl.Signals.First().SentDateTime} - {tl.Signals.Last().SentDateTime}]");
+            });
+            
+            EditorGUI.indentLevel--;
         }
 
         private static void RenderingGUI(SerializedObject serializedObject)
@@ -96,6 +140,8 @@ namespace SILVO.Editor.SPP
                 AnimalTimelineRendererEditor.CheckpointsGUI(timelineSerializedObj);
                 EditorGUILayout.Separator();
                 TimelineRendererEditor.LineRendererGUI(timelineSerializedObj);
+                EditorGUILayout.Separator();
+                TimelineRendererEditor.CommonPropsGUI(timelineSerializedObj);
             }
             
             EditorGUI.indentLevel--;

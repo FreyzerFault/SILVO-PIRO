@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DavidUtils.ExtensionMethods;
 using UnityEngine;
 
 namespace SILVO.SPP
@@ -10,6 +11,7 @@ namespace SILVO.SPP
     {
         // CHECKPOINTS
         [SerializeField] protected List<Vector3> checkpoints;
+        
         public virtual List<Vector3> Checkpoints
         {
             get => checkpoints;
@@ -19,6 +21,9 @@ namespace SILVO.SPP
                 onCheckpointsUpdated?.Invoke();
             }
         }
+
+        public Vector2[] Checkpoints2D => checkpoints.Select(v => v.ToV2(true)).ToArray();
+        
         public int PointCount => Checkpoints.Count;
         public bool IsEmpty => PointCount == 0;
 
@@ -106,12 +111,12 @@ namespace SILVO.SPP
         public Vector3 CurrentCheckpoint => Checkpoints[CurrentCheckpointIndex];
         public Vector3 NextCheckpoint => Checkpoints[NextCheckpointIndex];
         
-        public Vector3[] CheckpointsCompleted() => 
+        public Vector3[] CheckpointsCompleted => 
             IsEmpty
                 ? Array.Empty<Vector3>()
                 : Checkpoints.ToArray()[..Mathf.FloorToInt(PointCount * Progress)];
         
-        public Vector3[] CheckpointsRemaining() => 
+        public Vector3[] CheckpointsRemaining => 
             IsEmpty
                 ? Array.Empty<Vector3>()
                 : Checkpoints.ToArray()[Mathf.FloorToInt(PointCount * Progress)..];
@@ -151,7 +156,7 @@ namespace SILVO.SPP
         
         #region RENDERING
         
-        private new TimelineRenderer _renderer;
+        private TimelineRenderer _renderer;
 
         public TimelineRenderer Renderer => _renderer ??= GetComponent<TimelineRenderer>();
         

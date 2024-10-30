@@ -4,31 +4,41 @@ using System.Linq;
 using DavidUtils.ExtensionMethods;
 using SILVO.Terrain;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace SILVO.SPP
 {
     [ExecuteAlways]
     public class AnimalTimeline : Timeline
     {
-        [SerializeField]
-        private int _id = -1;
-        public int ID => _id;
+        [SerializeField] private int id = -1;
+        public int ID => id;
 
-        private AnimalTimelineRenderer atRenderer;
+        private AnimalTimelineRenderer _atRenderer;
 
         #region SIGNALS
 
         private Dictionary<DateTime, SPP_Signal> _timeline = new();
         
         public DateTime[] TimesStamps => _timeline.Keys.OrderBy(t => t).ToArray();
+        public SPP_Signal[] Signals
+        {
+            get => _timeline.Values.ToArray();
+            set
+            {
+                _timeline = value.ToDictionaryByDate();
+                id = Signals.First().id;
+                Checkpoints = _timeline.Values.Select(s => TerrainManager.Instance.WorldToTerrain3D(s.Position)).ToList();
+            }
+        }
         public SPP_Signal[] SignalsOrdered
         {
             get => _timeline.Values.OrderBy(s => s.SentDateTime).ToArray();
             set
             {
                 _timeline = value.ToDictionaryByDate();
-                _id = SignalsOrdered.First().id;
-                Checkpoints = _timeline.Values.Select(s => s.Position).Select(GetPositionOnTerrain).ToList();
+                id = SignalsOrdered.First().id;
+                Checkpoints = _timeline.Values.Select(s => TerrainManager.Instance.WorldToTerrain3D(s.Position)).ToList();
             }
         }
 
@@ -43,8 +53,8 @@ namespace SILVO.SPP
 
         protected override void OnEnable()
         {
-            atRenderer = GetComponent<AnimalTimelineRenderer>() ?? gameObject.AddComponent<AnimalTimelineRenderer>();
-            atRenderer.Timeline = this;
+            _atRenderer = GetComponent<AnimalTimelineRenderer>() ?? gameObject.AddComponent<AnimalTimelineRenderer>();
+            _atRenderer.Timeline = this;
         }
 
         public SPP_Signal this[int index] => SignalsOrdered[index];
@@ -57,14 +67,15 @@ namespace SILVO.SPP
         {
             _timeline[signal.SentDateTime] = signal;
             int index = SignalsOrdered.IndexOf(signal);
-            InsertCheckpoint(index, GetPositionOnTerrain(signal.Position));
+            InsertCheckpoint(index, TerrainManager.Instance.WorldToTerrain3D(signal.Position));
         }
 
         public void AddSignals(SPP_Signal[] signals)
         {
             signals.ForEach(s => _timeline.Add(s.SentDateTime, s));
             var signalsOrdered = SignalsOrdered;
-            signals.ForEach(s => InsertCheckpoint(signalsOrdered.IndexOf(s), GetPositionOnTerrain(s.Position)));
+            signals.ForEach(s =>
+                InsertCheckpoint(signalsOrdered.IndexOf(s), TerrainManager.Instance.WorldToTerrain3D(s.Position)));
         }
         
         public void RemoveSignal(SPP_Signal signal)
@@ -72,14 +83,6 @@ namespace SILVO.SPP
             _timeline.Remove(signal.SentDateTime);
             RemoveCheckpoint(SignalsOrdered.IndexOf(signal));
         }
-
-        #endregion
-
-
-        #region TERRAIN POSITION
-
-        private Vector3 GetPositionOnTerrain(Vector2 pos) => 
-            TerrainManager.Instance.GetRelativeTerrainPositionWithHeight(pos);
 
         #endregion
         

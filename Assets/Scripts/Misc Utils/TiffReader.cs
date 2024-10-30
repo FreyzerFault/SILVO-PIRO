@@ -5,6 +5,8 @@ using System.Net.Http.Headers;
 using BitMiracle.LibTiff.Classic;
 using DavidUtils.ExtensionMethods;
 using DotSpatial.Data;
+using DotSpatial.Projections;
+using SILVO.GeoReferencing;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -27,6 +29,9 @@ namespace SILVO.Misc_Utils
             public Vector2 originRaster;
             public Vector2 originWorld;
             public string projectionStr;
+            
+            // TODO Extraer la ProjectionInfo del GEO-Tiff
+            public ProjectionInfo Projection => GeoReferencing.GeoProjections.Utm30NProjInfo;
 
             public Vector2Int WorldSize => new Vector2Int((int)(width * sampleScale.x), (int)(height * sampleScale.y));
 
@@ -90,10 +95,11 @@ namespace SILVO.Misc_Utils
             
             // PROJECTION Name
             var asciiParamsTag = tiff.GetField(TiffTag.GEOTIFF_GEOASCIIPARAMSTAG);
+            var projectionStr = asciiParamsTag[1].ToString();
             
             var metaData = new TiffMetaData(
                 width, height, bitsPerSample, format, pixelScale,
-                originRaster, originWorld, asciiParamsTag[1].ToString());
+                originRaster, originWorld, projectionStr);
             
             // DEBUG GEOTIFF TAGS
             {

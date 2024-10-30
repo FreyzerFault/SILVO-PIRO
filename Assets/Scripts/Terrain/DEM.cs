@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using DavidUtils.ExtensionMethods;
+using DotSpatial.Projections;
 using SILVO.Misc_Utils;
 using UnityEngine;
 
@@ -20,7 +21,7 @@ namespace SILVO.Terrain
         public TiffReader.TiffMetaData metaData;
 
         public bool IsEmpty => heightData.IsNullOrEmpty();
-
+        
         public Vector2 WorldOrigin => metaData.originWorld;
         
         /// <summary>
@@ -86,6 +87,7 @@ namespace SILVO.Terrain
 
             tex.SetPixels(lowResHeightMap);
             tex.Apply();
+            
             return tex;
         }
 

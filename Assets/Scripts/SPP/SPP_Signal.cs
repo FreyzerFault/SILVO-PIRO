@@ -29,7 +29,7 @@ namespace SILVO.SPP
         [SerializeField] public int id;
         [SerializeField] private SerializableDateTime receivedTime;
         [SerializeField] private SerializableDateTime sentTime;
-        [FormerlySerializedAs("positionLatLon")] [SerializeField] private Vector2 positionLonLat;
+        [SerializeField] private Vector2 positionLonLat;
         [SerializeField] private Vector2 positionUTM;
         [SerializeField] public SignalType type;
         
@@ -39,13 +39,20 @@ namespace SILVO.SPP
         public DateTime ReceivedDateTime => receivedTime.DateTime;
         public DateTime SentDateTime => sentTime.DateTime;
 
+        // Georreferencing PROJECTIONS
+        private ProjectionInfo currentProj => GeoProjections.Utm30NProjInfo;
+        private ProjectionInfo dataProj => 
+            TerrainManager.Instance != null
+                ? TerrainManager.Instance.WorldProjection 
+                : GeoProjections.WgsProjInfo;
+        
         public Vector2 Position
         {
             get => positionUTM;
             set
             {
                 positionUTM = value;
-                positionLonLat = GeoProjections.GeoProject(value, GeoProjections.Utm30NProjInfo, GeoProjections.WgsProjInfo);
+                positionLonLat = GeoProjections.GeoProject(value, currentProj, dataProj);
             }
         }
 
@@ -57,7 +64,7 @@ namespace SILVO.SPP
             this.receivedTime = new SerializableDateTime(receivedTime);
             this.type = type;
             this.positionLonLat = positionLonLat;
-            positionUTM = GeoProjections.GeoProject(positionLonLat, GeoProjections.WgsProjInfo, GeoProjections.Utm30NProjInfo);
+            positionUTM = GeoProjections.GeoProject(positionLonLat, dataProj, currentProj);
         }
 
         public override string ToString() => $"[{id} - {sentTime.FullDateStr}]: {SignalTypeLabel} at {positionLonLat}.";

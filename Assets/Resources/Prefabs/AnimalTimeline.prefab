@@ -25,13 +25,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3495422399556609651}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1878200495338851433}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
 --- !u!120 &2324585233397866481
 LineRenderer:
   serializedVersion: 2
@@ -80,7 +80,7 @@ LineRenderer:
   m_Positions: []
   m_Parameters:
     serializedVersion: 3
-    widthMultiplier: 6
+    widthMultiplier: 2
     widthCurve:
       serializedVersion: 2
       m_Curve:
@@ -128,7 +128,7 @@ LineRenderer:
       m_NumAlphaKeys: 2
     numCornerVertices: 0
     numCapVertices: 0
-    alignment: 0
+    alignment: 1
     textureMode: 0
     textureScale: {x: 1, y: 1}
     shadowBias: 0.5
@@ -185,7 +185,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   checkpoints: []
-  _id: -1
+  id: -1
 --- !u!114 &-5360200525250560593
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -202,14 +202,15 @@ MonoBehaviour:
   ignoredObjs:
   - {fileID: 983416084308433147}
   - {fileID: 2324585233397866481}
+  - {fileID: 983416084308433147}
+  - {fileID: 2324585233397866481}
   singleColor: 0
   colorPaletteData:
     baseColor: {r: 1, g: 1, b: 1, a: 1}
     paletteStep: 0.05
     paletteRange: 20
   colors: []
-  projectedOnTerrain: 0
-  terrainHeightOffset: 0.1
+  terrainHeightOffset: 0.5
   spherePrefab: {fileID: 8275781882222613945, guid: 626c4feb343a78b4d9fec25f1cc79f14,
     type: 3}
   pointPrefab: {fileID: 2056056856686600614, guid: 73ef3babd79182541b0828d62b3e0d74,
@@ -217,7 +218,7 @@ MonoBehaviour:
   circlePrefab: {fileID: 2189909995984353592, guid: d7dc7256122350f4590787a93fdb0238,
     type: 3}
   renderMode: 2
-  radius: 20
+  radius: 1
   pointThickness: 0
   textureSize: 20
   drawGizmos: 0
@@ -227,11 +228,11 @@ MonoBehaviour:
   lrPrev: {fileID: 983416084308433147}
   lineColor: {r: 1, g: 0.5026138, b: 0, a: 1}
   lineColorCompleted: {r: 1, g: 0.5019608, b: 0, a: 0.5686275}
-  lineWidth: 6
+  lineWidth: 2
   lineVisible: 1
   checkpointTypeVisibility:
     m_keys: 0000000001000000020000000300000004000000
-    m_values: 0101010101
+    m_values: 0100010101
 --- !u!1 &8560727274804804973
 GameObject:
   m_ObjectHideFlags: 0
@@ -257,13 +258,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8560727274804804973}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1878200495338851433}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
 --- !u!120 &983416084308433147
 LineRenderer:
   serializedVersion: 2
@@ -312,7 +313,7 @@ LineRenderer:
   m_Positions: []
   m_Parameters:
     serializedVersion: 3
-    widthMultiplier: 5.3999996
+    widthMultiplier: 1.8
     widthCurve:
       serializedVersion: 2
       m_Curve:
@@ -360,7 +361,7 @@ LineRenderer:
       m_NumAlphaKeys: 2
     numCornerVertices: 0
     numCapVertices: 0
-    alignment: 0
+    alignment: 1
     textureMode: 0
     textureScale: {x: 1, y: 1}
     shadowBias: 0.5

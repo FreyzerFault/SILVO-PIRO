@@ -32,6 +32,9 @@ namespace SILVO.Editor.SPP
             TimelineInfoGUI(renderer);
             
             EditorGUILayout.Separator();
+            
+            
+            
             EditorGUILayout.Separator();
             
             CheckpointsGUI(serializedObject);
@@ -43,6 +46,10 @@ namespace SILVO.Editor.SPP
             EditorGUILayout.Separator();
             
             TestingGUI(renderer);
+            
+            EditorGUILayout.Separator();
+            
+            CommonPropsGUI(serializedObject);
         }
 
 
@@ -50,7 +57,19 @@ namespace SILVO.Editor.SPP
         {
             EditorGUILayout.LabelField($"{renderer.Timeline.PointCount} Checkpoints", EditorStyles.boldLabel);
         }
-        
+
+        public static void CommonPropsGUI(SerializedObject serializedObject)
+        {
+            TimelineRenderer[] renderers = serializedObject.targetObjects.Cast<TimelineRenderer>().ToArray();
+            if (renderers.IsNullOrEmpty()) return;
+            
+            Fields.InputField_Multiple<TimelineRenderer>(
+                serializedObject,
+                "terrainHeightOffset",
+                "Height Offset",
+                r => r.UpdateTimeline()
+            );
+        }
 
         public static void CheckpointsGUI(SerializedObject serializedObject)
         {
