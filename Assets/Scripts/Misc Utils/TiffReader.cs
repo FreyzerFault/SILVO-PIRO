@@ -31,7 +31,7 @@ namespace SILVO.Misc_Utils
             public string projectionStr;
             
             // TODO Extraer la ProjectionInfo del GEO-Tiff
-            public ProjectionInfo Projection => GeoReferencing.GeoProjections.Utm30NProjInfo;
+            public ProjectionInfo Projection => GeoProjections.Utm30NProjInfo;
 
             public Vector2Int WorldSize => new Vector2Int((int)(width * sampleScale.x), (int)(height * sampleScale.y));
 

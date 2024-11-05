@@ -100,7 +100,12 @@ namespace SILVO.Terrain
         public Vector2 GetNormalizedPosition(Vector2 pos) => pos / TerrainSize2D;
         public Vector2 GetNormalizedPosition_World(Vector2 worldPosition) => worldPosition / WorldSize;
 
-        public Vector2 WorldToTerrainPosition(Vector2 worldPosition) => worldPosition - WorldOrigin;
+        public Vector2 WorldToTerrainPosition(Vector2 worldPosition)
+        {
+            Debug.Log($"World Position {worldPosition} relative to World Origin: {WorldOrigin} is {worldPosition - WorldOrigin}");
+            return worldPosition - WorldOrigin;
+        }
+
         public Vector2 TerrainToWorldPosition(Vector2 terrainPos) => terrainPos + WorldOrigin;
 
         #endregion

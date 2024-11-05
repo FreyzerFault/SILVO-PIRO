@@ -26,26 +26,21 @@ namespace SILVO.SPP
             get => _timeline.Values.ToArray();
             set
             {
+                
                 _timeline = value.ToDictionaryByDate();
+                
+                Debug.Log($"Setting Checkpoints: {_timeline.Count}\n" +
+                          $"First: {_timeline.Values.First().Position} to {TerrainManager.Instance.WorldToTerrain3D(_timeline.Values.First().Position)}\n");
+                
                 id = Signals.First().id;
                 Checkpoints = _timeline.Values.Select(s => TerrainManager.Instance.WorldToTerrain3D(s.Position)).ToList();
             }
         }
-        public SPP_Signal[] SignalsOrdered
-        {
-            get => _timeline.Values.OrderBy(s => s.SentDateTime).ToArray();
-            set
-            {
-                _timeline = value.ToDictionaryByDate();
-                id = SignalsOrdered.First().id;
-                Checkpoints = _timeline.Values.Select(s => TerrainManager.Instance.WorldToTerrain3D(s.Position)).ToList();
-            }
-        }
 
-        public SPP_Signal.SignalType[] SignalTypes => SignalsOrdered.Select(s => s.type).ToArray();
+        public SPP_Signal.SignalType[] SignalTypes => Signals.Select(s => s.type).ToArray();
         
         public Vector3[] CheckpointsByType(SPP_Signal.SignalType type) =>
-            Checkpoints.FromIndices(SignalsOrdered.AllIndices(s => s.type == type)).ToArray();
+            Checkpoints.FromIndices(Signals.AllIndices(s => s.type == type)).ToArray();
 
         
         #endregion
@@ -57,7 +52,7 @@ namespace SILVO.SPP
             _atRenderer.Timeline = this;
         }
 
-        public SPP_Signal this[int index] => SignalsOrdered[index];
+        public SPP_Signal this[int index] => Signals[index];
         public SPP_Signal this[DateTime time] => _timeline[time];
         
         
@@ -66,14 +61,14 @@ namespace SILVO.SPP
         public void AddSignal(SPP_Signal signal)
         {
             _timeline[signal.SentDateTime] = signal;
-            int index = SignalsOrdered.IndexOf(signal);
+            int index = Signals.IndexOf(signal);
             InsertCheckpoint(index, TerrainManager.Instance.WorldToTerrain3D(signal.Position));
         }
 
         public void AddSignals(SPP_Signal[] signals)
         {
             signals.ForEach(s => _timeline.Add(s.SentDateTime, s));
-            var signalsOrdered = SignalsOrdered;
+            var signalsOrdered = Signals;
             signals.ForEach(s =>
                 InsertCheckpoint(signalsOrdered.IndexOf(s), TerrainManager.Instance.WorldToTerrain3D(s.Position)));
         }
@@ -81,7 +76,7 @@ namespace SILVO.SPP
         public void RemoveSignal(SPP_Signal signal)
         {
             _timeline.Remove(signal.SentDateTime);
-            RemoveCheckpoint(SignalsOrdered.IndexOf(signal));
+            RemoveCheckpoint(Signals.IndexOf(signal));
         }
 
         #endregion
@@ -89,7 +84,7 @@ namespace SILVO.SPP
         
         #region LOG
 
-        public string[] GetSignalsLog() => SignalsOrdered.Select(s =>
+        public string[] GetSignalsLog() => Signals.Select(s =>
             $"[{s.SignalTypeLabel}] on {s.Position} | SENT: {s.SentDateTime} - RECEIVED: {s.ReceivedDateTime}").ToArray();
 
         #endregion

@@ -119,7 +119,7 @@ namespace SILVO.SPP
                 InstantiateAnimalTimelines();
             }
             else
-                _timelines.ForEach(tl => tl.SignalsOrdered = SignalsPerId[tl.ID]);
+                _timelines.ForEach(tl => tl.Signals = SignalsPerId[tl.ID]);
         }
         
         private void InstantiateAnimalTimelines()
@@ -130,7 +130,7 @@ namespace SILVO.SPP
                 obj.name = $"AnimalTimeline_{pair.Key}";
                 AnimalTimeline timeline = obj.GetComponent<AnimalTimeline>();
                 _timelines.Add(timeline);
-                timeline.SignalsOrdered = pair.Value;
+                timeline.Signals = pair.Value;
                 return timeline;
             }).ToList();
         }

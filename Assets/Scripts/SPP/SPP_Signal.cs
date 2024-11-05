@@ -40,11 +40,11 @@ namespace SILVO.SPP
         public DateTime SentDateTime => sentTime.DateTime;
 
         // Georreferencing PROJECTIONS
-        private ProjectionInfo currentProj => GeoProjections.Utm30NProjInfo;
-        private ProjectionInfo dataProj => 
-            TerrainManager.Instance != null
-                ? TerrainManager.Instance.WorldProjection 
-                : GeoProjections.WgsProjInfo;
+        private ProjectionInfo currentProj => TerrainManager.Instance != null
+            ? TerrainManager.Instance.WorldProjection 
+            : GeoProjections.WgsProjInfo;
+        private ProjectionInfo dataProj => GeoProjections.WgsProjInfo;
+            
         
         public Vector2 Position
         {

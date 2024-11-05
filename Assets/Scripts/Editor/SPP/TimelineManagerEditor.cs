@@ -107,7 +107,8 @@ namespace SILVO.Editor.SPP
             manager.Timelines.ForEach(tl =>
             {
                 EditorGUILayout.LabelField($"Timeline {tl.ID} - {tl.Signals.Length} Signals");
-                EditorGUILayout.LabelField($"[{tl.Signals.First().SentDateTime} - {tl.Signals.Last().SentDateTime}]");
+                if (tl.Signals.NotNullOrEmpty())
+                    EditorGUILayout.LabelField($"[{tl.Signals.First().SentDateTime} - {tl.Signals.Last().SentDateTime}]");
             });
             
             EditorGUI.indentLevel--;

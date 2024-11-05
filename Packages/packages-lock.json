@@ -10,18 +10,10 @@
       },
       "url": "https://package.openupm.com"
     },
-    "com.david.procrain": {
-      "version": "file:C:/Users/dalcanta/Unity Projects/GENES/Packages/Procrain",
-      "depth": 0,
-      "source": "local",
-      "dependencies": {
-        "com.david.utils": "0.1.0"
-      }
-    },
     "com.david.utils": {
-      "version": "file:C:/Users/dalcanta/Unity Projects/GENES/Packages/David-Unity-Utils",
+      "version": "file:David-Unity-Utils",
       "depth": 0,
-      "source": "local",
+      "source": "embedded",
       "dependencies": {}
     },
     "com.github-glitchenzo.nugetforunity": {
@@ -121,7 +113,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.inputsystem": {
-      "version": "1.11.1",
+      "version": "1.11.2",
       "depth": 0,
       "source": "registry",
       "dependencies": {

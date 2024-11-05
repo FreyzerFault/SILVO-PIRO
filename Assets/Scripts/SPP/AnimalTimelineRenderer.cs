@@ -92,7 +92,7 @@ namespace SILVO.SPP
             colors = VisibleTypes.SelectMany(type =>
                 GetSignalColor(type)
                     .ToFilledArray(
-                        AnimalTimeline.SignalsOrdered.Count(s => s.type == type)))
+                        AnimalTimeline.Signals.Count(s => s.type == type)))
                 .ToArray();
             base.UpdateColor();
         }

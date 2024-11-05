@@ -15,7 +15,7 @@ namespace SILVO.SPP
     [Serializable]
     public class SPP_CsvLine : ICsvLine
     {
-        private static string[] HEADERS = { "device_id", "sent_time", "received_time", "msg_type", "lon", "lat" };
+        private static string[] HEADERS = { "device_id", "sent_time", "received_time", "msg_type", "lat", "lon" };
         private static int[] MAX_COL_LENGHT = { 6, 20, 20, 10, 10, 10};
         
         public bool HasColumn(string name) => HEADERS.Contains(name);
@@ -83,6 +83,8 @@ namespace SILVO.SPP
             badFlags[5] = !float.TryParse(this["lat"], NumberStyles.Float, new CultureInfo( "en-US"), out float lat);
             Vector2 position = new Vector2(badFlags[4] ? 0 : lon, badFlags[5] ? 0 : lat);
             
+            Debug.Log(position);
+            
             // No sent time => EMPTY Signal. No unexpected error
             if (this["sent_time"] == "") return null;
 
@@ -103,7 +105,7 @@ namespace SILVO.SPP
             // Hay datos que traen la posicion escalada * 1.000.000, sin punto decimal
             // Reescalarlo dividiendo / 1.000.000
             // (383831473 => 38.3831473)
-            if (position.x > 90 || position.x < -90 || position.y > 180 || position.y < -180) 
+            if (position.x > 180 || position.x < -180 || position.y > 90 || position.y < -90) 
                 position /= 1000000;
             
             // All GOOD => Create Signal
@@ -116,7 +118,7 @@ namespace SILVO.SPP
         
         #region LABELS
 
-        public static string[] HEADER_LABELS = { "ID", "Sent", "Received", "Type", "Lon", "Lat" };
+        public static string[] HEADER_LABELS = { "ID", "Sent", "Received", "Type", "Lat", "Lon" };
         public static string Header_Table_Line => 
             string.Join(" | ", HEADER_LABELS.Select((label, i) => label.TruncateFixedSize(MAX_COL_LENGHT[i])));
         

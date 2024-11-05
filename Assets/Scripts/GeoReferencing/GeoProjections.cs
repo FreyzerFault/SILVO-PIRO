@@ -26,6 +26,9 @@ namespace SILVO.GeoReferencing
             return xy.ToVector2Array();
         }
         public static Vector2 GeoProject(Vector2 point, ProjectionInfo from, ProjectionInfo to)
-            => GeoProject(point.ToSingleArray(), from, to)[0];
+        {
+            Debug.Log($"Geoprojecting point {point} from {from} to {to}: {GeoProject(point.ToSingleArray(), from, to)[0]}");;
+            return GeoProject(point.ToSingleArray(), from, to)[0];
+        }
     }
 }
