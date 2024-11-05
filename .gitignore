@@ -78,3 +78,8 @@ crashlytics-build.properties
 # Datos de terreno muy pesados
 /[Aa]ssets/Resources/Map Data/DEMs
 /[Aa]ssets/Resources/Map FBXs/
+
+
+# Packages
+/Packages/David-Unity-Utils
+/Packages/Procrain
