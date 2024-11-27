@@ -1,14 +1,12 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Net.Http.Headers;
 using BitMiracle.LibTiff.Classic;
 using DavidUtils.ExtensionMethods;
 using DotSpatial.Data;
 using DotSpatial.Projections;
 using SILVO.GeoReferencing;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace SILVO.Misc_Utils
 {

@@ -16,8 +16,7 @@ namespace SILVO.Terrain
         }
 
         public ShapeMetaData metaData;
-        
-        [SerializeField]
+
         protected Shape shape;
 
         public virtual Shape Shape

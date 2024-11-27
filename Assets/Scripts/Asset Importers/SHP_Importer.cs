@@ -2,7 +2,6 @@ using System;
 using System.Data;
 using System.Linq;
 using DavidUtils.ExtensionMethods;
-using DavidUtils.Rendering;
 using DotSpatial.Data;
 using SILVO.Terrain;
 using UnityEditor.AssetImporters;
