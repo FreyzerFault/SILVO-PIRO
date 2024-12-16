@@ -1,3 +1,4 @@
+using DavidUtils.Editor.DevTools.CustomFields;
 using SILVO.Asset_Importers;
 using SILVO.Terrain;
 using UnityEditor;
@@ -57,9 +58,8 @@ namespace SILVO.Editor
                 EditorGUILayout.LabelField("No texture. Reimport pls", EditorStyles.boldLabel);
                 tex = Texture2D.blackTexture;
             }
-                
-            int texSize = shpfileComp.TexSize == default ? 128 : shpfileComp.TexSize.x;
-            EditorGUI.DrawPreviewTexture(GUILayoutUtility.GetRect(texSize, texSize), tex);
+
+            EditorGUI.DrawPreviewTexture(GUILayoutUtility.GetRect(128, 128), tex);
 
             EditorGUILayout.EndVertical();
         }
@@ -87,10 +87,8 @@ namespace SILVO.Editor
             
             // TEXTURE SIZE
             {
-                EditorGUI.BeginChangeCheck();
-                int newTexSize = EditorGUILayout.IntField("Texture Size:", shpfileComp.TexSize.x);
-                if (EditorGUI.EndChangeCheck())
-                    shpfileComp.TexSize = new Vector2Int(newTexSize, newTexSize);
+                // MyInputFields.InputField(serializedObject, "shpfileComponent.texSize", "Texture Size",
+                //     () => ((SHP_Importer)target).shpfileComponent.UpdateTexture());
             }
             
             // MAX SUB POLYGON COUNT
@@ -101,10 +99,21 @@ namespace SILVO.Editor
                         EditorGUILayout.IntField("Max SubPolygons:", maxSubpolygonProp.intValue);
             }
 
+            // TERRAIN OVERLAPING
             {
-                SerializedProperty terrainOffsetProp = serializedObject.FindProperty("terrainOffset");
-                if (terrainOffsetProp != null)
-                    terrainOffsetProp.intValue = EditorGUILayout.IntField("Height Offset", terrainOffsetProp.intValue);
+                SerializedProperty onTerrainProp = serializedObject.FindProperty("onTerrain");
+                if (onTerrainProp != null)
+                {
+                    onTerrainProp.boolValue = EditorGUILayout.Toggle("Render On Terrain", onTerrainProp.boolValue);
+
+                    if (onTerrainProp.boolValue)
+                    {
+                        SerializedProperty terrainOffsetProp = serializedObject.FindProperty("terrainOffset");
+                        if (terrainOffsetProp != null)
+                            terrainOffsetProp.intValue =
+                                EditorGUILayout.IntField("Height Offset", terrainOffsetProp.intValue);
+                    }
+                }
             }
             
             EditorGUILayout.EndVertical();

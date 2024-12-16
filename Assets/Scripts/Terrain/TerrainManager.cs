@@ -5,7 +5,6 @@ using DavidUtils.ExtensionMethods;
 using DotSpatial.Data;
 using SILVO.DotSpatialExtensions;
 using UnityEngine;
-using DavidUtils.ExtensionMethods;
 using DotSpatial.Projections;
 
 namespace SILVO.Terrain

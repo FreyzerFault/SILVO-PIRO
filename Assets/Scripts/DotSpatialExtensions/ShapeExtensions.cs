@@ -13,19 +13,24 @@ namespace SILVO.DotSpatialExtensions
 
         public static Polygon GetPolygon(this Shape shape)
         {
-            // double[] to Coordinate[]
-            double[] shpVertices = shape.Vertices;
-            Coordinate[] vertices = new Coordinate[shpVertices.Length / 2];
-            for (var i = 0; i < shpVertices.Length / 2; i++) 
-                vertices[i] = new Coordinate(shpVertices[i * 2], shpVertices[i * 2 + 1]);
-            
-            Polygon polygon = new Polygon(vertices.Select(c => new Vector2((float)c.X, (float)c.Y)).ToArray());
+            Polygon polygon = new Polygon(shape.GetPoints());
             
             // Dado la vuelta CW -> CCW y limpiar vertices duplicados y ejes superpuestos
             polygon = polygon.Revert();
             polygon.CleanDegeneratePolygon();
 
             return polygon;
+        }
+        
+        public static Vector2[] GetPoints(this Shape shape)
+        {
+            // double[] to Vector2[]
+            double[] shpVertices = shape.Vertices;
+            Vector2[] points = new Vector2[shpVertices.Length / 2];
+            for (var i = 0; i < shpVertices.Length / 2; i++) 
+                points[i] = new Vector2((float)shpVertices[i * 2], (float)shpVertices[i * 2 + 1]);
+
+            return points;
         }
     }
 }

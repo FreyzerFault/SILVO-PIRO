@@ -1,17 +1,23 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DavidUtils;
 using DavidUtils.ExtensionMethods;
 using DavidUtils.Rendering;
+using DavidUtils.Rendering.Extensions;
 using DotSpatial.Data;
+using NetTopologySuite.Geometries;
+using NetTopologySuite.Operation.Union;
+using UnityEditor.Graphs;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace SILVO.Terrain
 {
     [Serializable]
     public struct ShapefileMetaData
     {
-        public int ShapeCount;
+        public int shapeCount;
         public FeatureType featureType;
         public string projectionName;
         public Vector2 min;
@@ -19,7 +25,7 @@ namespace SILVO.Terrain
         
         public ShapefileMetaData(Shapefile shp)
         {
-            ShapeCount = shp.ShapeIndices?.Count ?? 0;
+            shapeCount = shp.ShapeIndices?.Count ?? 0;
             featureType = shp.FeatureType;
             projectionName = shp.Projection.Name.Replace("_", " ");
             min = new Vector2((float)shp.Extent.MinX, (float)shp.Extent.MinY);
@@ -27,25 +33,28 @@ namespace SILVO.Terrain
         }
 
         public override string ToString()
-            => $"{ShapeCount} shapes. Type: {featureType} shapes. Projection: {projectionName}\n" +
+            => $"{shapeCount} shapes. Type: {featureType} shapes. Projection: {projectionName}\n" +
                $"AABB: {min} - {max}";
     }
     
     [ExecuteAlways]
     public class Shapefile_Component: MonoBehaviour
     {
-        private int maxSubPolygonCount;
+        [Tooltip("To Render Concave Polygons divided in Convex SubPolygons")]
+        [SerializeField] private int maxSubPolygonCount;
+        private List<SHP_Component> _shpComponents = new();
         
-        private List<SHP_Component> shpComponents = new();
-        public SHP_Component[] ShpComponents => shpComponents.ToArray();
+        public SHP_Component[] ShpComponents => _shpComponents.ToArray();
         
-        [SerializeField]
-        public ShapefileMetaData metaData;
+        [SerializeField] public ShapefileMetaData metaData;
+        
         public FeatureType FeatureType => metaData.featureType;
-        public int ShapeCount => metaData.ShapeCount;
+        public int ShapeCount => metaData.shapeCount;
         public string ProjectionName => metaData.projectionName;
         public Vector2 Min => metaData.min;
         public Vector2 Max => metaData.max;
+
+        [SerializeField] private bool loaded = false;
         
         private Shapefile _shpfile;
         public Shapefile Shpfile
@@ -55,66 +64,215 @@ namespace SILVO.Terrain
             {
                 _shpfile = value;
                 if (_shpfile == null)
-                    Debug.LogError("Shapefile is null", this);
+                {
+                    Debug.LogError($"Shapefile is null", this);
+                    return;
+                }
+                
                 metaData = new ShapefileMetaData(_shpfile);
                 InstantiateShapes();
+                OverTerrain = overTerrain;
                 UpdateTexture();
+                
+                filePath = _shpfile.Filename;
             }
+        }
+
+        private void Start()
+        {
+            if (_shpfile == null && filePath.NotNullOrEmpty() && !loaded)
+                LoadShapeFile();
+        }
+
+        public void LoadShapeFile()
+        {
+            Shpfile = OpenFile(filePath);
         }
         
 
-        private void InstantiateShapes()
+        #region SHAPEFILE
+
+        [SerializeField] private string filePath;
+        
+        public static Shapefile_Component InstantiateShapefile(Shapefile shpfile, int maxSubPolygonCount = PolygonRenderer.DEFAULT_MAX_SUBPOLYGONS_COUNT)
         {
-            List<ShapeRange> shpIndices = _shpfile.ShapeIndices;
-            shpComponents = shpIndices
-                .Select((s, i) =>
-                    InstantiateShape(_shpfile.GetShape(i, true), _shpfile.FeatureType, shpIndices[i].Parts))
-                .ToList();
-            
-            shpComponents.ForEach((sc, i) => sc.name = $"{FeatureType.ToString()} {i}");
+            var shpfileComp = new GameObject().AddComponent<Shapefile_Component>();
+            shpfileComp.maxSubPolygonCount = maxSubPolygonCount;
+            shpfileComp.Shpfile = shpfile;
+            shpfileComp.loaded = true;
+            return shpfileComp;
+        }
+        
+        public static Shapefile_Component InstantiateShapefile(string filePath, int maxSubPolygonCount = PolygonRenderer.DEFAULT_MAX_SUBPOLYGONS_COUNT)
+        {
+            var shpfileComp = UnityUtils.InstantiateObject<Shapefile_Component>(null);
+            shpfileComp.maxSubPolygonCount = maxSubPolygonCount;
+            shpfileComp.Shpfile = OpenFile(filePath);
+            shpfileComp.loaded = true;
+            return shpfileComp;
+        }
+        
+        public static Shapefile OpenFile(string path)
+        {
+            try
+            {
+                Shapefile shp = Shapefile.OpenFile(path);
+                if (shp == null)
+                    Debug.LogError($"Failed to open SHP file in {path}");
+                return shp;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"File Error: {path}\n" + e);
+            }
+
+            return null;
         }
 
-        private SHP_Component InstantiateShape(Shape shp, FeatureType type, List<PartRange> parts = null)
+        #endregion
+
+
+        #region SHAPES
+
+        public void InstantiateShapes()
         {
-            GameObject obj = Instantiate(new GameObject(), transform);
+            var children = GetComponentsInChildren<SHP_Component>();
+            if (children is { Length: > 0 })
+                children.ForEach(UnityUtils.DestroySafe);
+            
+            if (_shpfile == null)
+            {
+                Debug.LogError("Shapefile is null while Instiatiating Shapes", this);
+                return;
+            }
+            
+            
+            List<ShapeRange> shpIndices = _shpfile.ShapeIndices;
+            if (FeatureType is FeatureType.Point)
+            {
+                // Si son puntos sueltos los unimos en un solo MultiPoint
+                double[][] points = shpIndices.Select((s, i) => _shpfile.GetShape(i, true).Vertices).ToArray();
+                Point[] geom = points.Select(p => new Point(p[0], p[1])).ToArray();
+                var mp = new MultiPoint(geom);
+                var shp = new Shape(mp, FeatureType.MultiPoint);
+                _shpComponents = new List<SHP_Component> {InstantiateShape(shp)};
+            }
+            else
+            {
+                _shpComponents = shpIndices
+                    .Select((s, i) =>
+                    {
+                        Shape shape = _shpfile.GetShape(i, true);
+                        List<PartRange> parts = shpIndices[i].Parts;
+                        return InstantiateShape(shape, parts, i.ToString(), GetColor(i));
+                    })
+                    .ToList();
+            }
+        }
+
+        private SHP_Component InstantiateShape(Shape shp, List<PartRange> parts = null, string label = "", Color color = default)
+        {
             SHP_Component shpComp = null;
             
-            switch (type)
+            switch (FeatureType)
             {
                 case FeatureType.Polygon:
-                    obj.AddComponent<LineRenderer>();
-                    obj.AddComponent<MeshRenderer>();
-                    obj.AddComponent<MeshFilter>();
-                    obj.AddComponent<PolygonRenderer>();
-                    shpComp = obj.AddComponent<PolygonSHP_Component>();
-                    ((PolygonSHP_Component)shpComp).maxSubPolygonCount = maxSubPolygonCount;
+                    shpComp = InstantiatePolygon(label, color);
                     break;
-                case FeatureType.MultiPoint:
-                case FeatureType.Line:
                 case FeatureType.Point:
+                case FeatureType.MultiPoint:
+                    shpComp = InstantiatePoints(label, color);
+                    break;
+                case FeatureType.Line:
+                    shpComp = InstantiateLine(label, color);
+                    break;
                 case FeatureType.Unspecified:
                 default:
                     Debug.LogError("Shapefile has an unsupported feature type", this);
                     break;
             }
+            shpComp.parentExtent = _shpfile.Extent;
             shpComp.Shape = shp;
             return shpComp;
         }
 
-        public static Shapefile_Component InstantiateShapefile(Shapefile shpfile, int maxSubPolygonCount = 500)
+        private SHP_Component InstantiatePolygon(string label = "", Color color = default)
         {
-            var shpfileComp = new GameObject().AddComponent<Shapefile_Component>();
-            shpfileComp.maxSubPolygonCount = maxSubPolygonCount;
-            shpfileComp.Shpfile = shpfile;
-            return shpfileComp;
+            PolygonRenderer renderer = UnityUtils.InstantiateObject<PolygonRenderer>(transform, $"Polygon {label}");
+            renderer.Color = color == default ? firstColor : color;
+            
+            SHP_Component shpComp = renderer.gameObject.AddComponent<PolygonSHP_Component>();
+            ((PolygonSHP_Component)shpComp).maxSubPolygonCount = maxSubPolygonCount;
+            return shpComp;
         }
+        
+        private SHP_Component InstantiateLine(string label = "", Color color = default)
+        {
+            LineRenderer lr = UnityUtils.InstantiateObject<LineRenderer>(transform, $"Line {label}");
+            lr.startColor = lr.endColor = color == default ? firstColor : color;
+            lr.SetDefaultMaterial();
+            lr.useWorldSpace = false;
+            SHP_Component shpComp = lr.gameObject.AddComponent<LineSHP_Component>();
+            return shpComp;
+        }
+        
+        private SHP_Component InstantiatePoints(string label = "", Color color = default)
+        {
+            PointsRenderer pr = UnityUtils.InstantiateObject<PointsRenderer>(transform, $"Points {label}");
+            SHP_Component shpComp = pr.gameObject.AddComponent<PointSHP_Component>();
+            return shpComp;
+        }
+
+        #endregion
+
+
+        #region COLOR
+
+        private Color firstColor = Color.cyan;
+        private Color[] _colors;
+
+        private void GenerateColors(int count) => _colors = firstColor.GetRainBowColors(count);
+        
+        private Color GetColor(int i)
+        {
+            if (_colors.IsNullOrEmpty() || _colors.Length <= i)
+                GenerateColors(i + 1);
+            return _colors[i];
+        }
+
+        #endregion
+        
+        
+        #region TERRAIN
+
+        [SerializeField] private bool overTerrain = false;
+        private int terrainOffset = 1000;
+
+        public bool OverTerrain
+        {
+            get => overTerrain;
+            set
+            {
+                overTerrain = value;
+                UpdateOverTerrain();
+            }
+        }
+        
+        public void UpdateOverTerrain()
+        {
+            transform.localRotation = overTerrain ? Quaternion.Euler(90, 0, 0) : Quaternion.identity;
+            transform.localPosition = transform.localPosition.WithY(overTerrain ? terrainOffset : 0);
+        }
+
+        #endregion
+        
         
         
         #region TEXTURE
 
         public Vector2Int TexSize
         {
-            get { return texSize; }
+            get => texSize;
             set
             {
                 texSize = value;
@@ -122,13 +280,13 @@ namespace SILVO.Terrain
             }
         }
 
-        public Texture2D[] ShapeTextures => shpComponents.Select(sc => sc.texture).ToArray();
+        public Texture2D[] ShapeTextures => _shpComponents.Select(sc => sc.texture).ToArray();
         public Texture2D texture;
         protected Vector2Int texSize = new(128, 128);
-        protected virtual void UpdateTexture() => texture = GetTexture();
+        public virtual void UpdateTexture() => texture = GetTexture();
 
         public virtual Texture2D GetTexture() => 
-            shpComponents.IsNullOrEmpty() ? null : shpComponents[0].texture ?? shpComponents[0].GetTexture();
+            _shpComponents.IsNullOrEmpty() ? null : _shpComponents[0].texture ?? _shpComponents[0].GetTexture();
 
         #endregion
 
@@ -137,7 +295,7 @@ namespace SILVO.Terrain
 
         public Mesh[] Meshes =>
             FeatureType == FeatureType.Polygon
-                ? shpComponents.Select(sc => ((PolygonSHP_Component)sc).renderer.Mesh).ToArray()
+                ? _shpComponents.Select(sc => ((PolygonSHP_Component)sc).renderer.Mesh).ToArray()
                 : null;
 
         #endregion
