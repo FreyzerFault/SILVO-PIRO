@@ -80,6 +80,6 @@ crashlytics-build.properties
 /[Aa]ssets/Resources/Map FBXs/
 
 
-# Packages
+# Embedded Packages
 /Packages/David-Unity-Utils
 /Packages/Procrain

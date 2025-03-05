@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using DavidUtils.Collections;
 using DavidUtils.ExtensionMethods;
-using External_Packages.SerializableDictionary;
 using UnityEngine;
 using SignalType = SILVO.SPP.SPP_Signal.SignalType;
 
@@ -23,7 +21,7 @@ namespace SILVO.SPP
         }
         
         [Serializable]
-        public class SignalTypeBoolDictionary : SerializableDictionaryByEnum<SignalType, bool>
+        public class SignalTypeBoolDictionary : SerializableDictionary<SignalType, bool>
         {}
         
         

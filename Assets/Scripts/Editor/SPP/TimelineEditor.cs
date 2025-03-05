@@ -66,9 +66,9 @@ namespace SILVO.Editor.SPP
                 
                 EditorGUILayout.LabelField($"{timeline.TimesStamps.First()} - {timeline.TimesStamps.Last()}");
                 
-                signalsFoldout = EditorGUILayout.Foldout(signalsFoldout, "Signals", true);
-                if (signalsFoldout)
-                    timeline.GetSignalsLog().ForEach(log => EditorGUILayout.LabelField(log, EditorStyles.miniLabel));
+                // signalsFoldout = EditorGUILayout.Foldout(signalsFoldout, "Signals", true);
+                // if (signalsFoldout)
+                //     timeline.GetSignalsLog().ForEach(log => EditorGUILayout.LabelField(log, EditorStyles.miniLabel));
 
                 EditorGUI.indentLevel--;
             }
