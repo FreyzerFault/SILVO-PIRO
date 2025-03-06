@@ -11,31 +11,28 @@ namespace SILVO.Terrain
     [ExecuteAlways] [Serializable]
     public class SHP_Component: MonoBehaviour
     {
-        public Extent parentExtent;
-        public Extent Extent => shape.Range.Extent;
+        [SerializeField] protected Vector2[] worldPoints;
+        public Vector2[] WorldPoints => worldPoints;
+        public int PointCount => worldPoints.Length;
+        
+        protected Extent extent; // Shape.Range.Extent
+        
+        private Extent _parentExtent; // Used to Normalize
+        public void SetParentExtent(Extent parentExtent) => _parentExtent = parentExtent;
 
-        protected Shape shape;
-
-        public virtual Shape Shape
+        // Shape is not Serializable, so it must be set in his creation
+        // Instead we get and use the points and the extent that are truly Serializable
+        public void SetShape(Shape shape)
         {
-            get => shape;
-            set
-            {
-                shape = value;
-                UpdateShape();
-            }
+            worldPoints = shape.GetPoints();
+            extent = shape.Range.Extent;
+            OnUpdateShape();
         }
         
-        
-        [SerializeField] protected Vector2[] _worldPoints;
-        public Vector2[] WorldPoints => _worldPoints;
-        public int PointCount => _worldPoints.Length;
-        
-        protected virtual void UpdateShape()
+        [ContextMenu("Force Update Shape")]
+        protected virtual void OnUpdateShape()
         {
             if (useTexture) UpdateTexture();
-            
-            _worldPoints = shape.GetPoints();
             UpdateTerrainProjection();
             UpdateNormalizedPolygon();
             UpdateTexture();
@@ -45,14 +42,14 @@ namespace SILVO.Terrain
         
         protected virtual void Awake() { }
 
-        private void OnEnable()
+        protected virtual void OnEnable()
         {
             if (TerrainManager.Instance == null) return;
             TerrainManager.Instance.onTerrainSizeChanged += UpdateTerrainProjection;
             TerrainManager.Instance.onTerrainSizeChanged += UpdateRenderer;
         }
         
-        private void OnDisable()
+        protected virtual void OnDisable()
         {
             if (TerrainManager.Instance == null) return;
             TerrainManager.Instance.onTerrainSizeChanged -= UpdateTerrainProjection;
@@ -71,11 +68,11 @@ namespace SILVO.Terrain
         
         protected virtual void UpdateNormalizedPolygon()
         {
-            int width = Mathf.RoundToInt((float) parentExtent.Width / underScaleRatio);
-            int height = Mathf.RoundToInt((float) parentExtent.Height / underScaleRatio);
-            var underScaler = new Projecter(parentExtent, new Vector2(width, height));
+            int width = Mathf.RoundToInt((float) _parentExtent.Width / underScaleRatio);
+            int height = Mathf.RoundToInt((float) _parentExtent.Height / underScaleRatio);
+            Projecter underScaler = new(_parentExtent, new Vector2(width, height));
             
-            underScaledPoints = _worldPoints.Select(p => underScaler.ReprojectPoint(p)).ToArray();
+            underScaledPoints = worldPoints.Select(p => underScaler.ReprojectPoint(p)).ToArray();
         }
 
         #endregion
@@ -85,31 +82,30 @@ namespace SILVO.Terrain
 
         public bool renderOnTerrain = true;
         
-        protected Vector2[] _terrainPoints;
-        protected Projecter _terrainProjecter;
-        public Vector2[] TerrainPoints => _terrainPoints;
+        protected Vector2[] terrainPoints;
+        protected Projecter terrainProjecter;
         
-        protected void UpdateTerrainProjection()
+        protected virtual void UpdateTerrainProjection()
         {
             if (TerrainManager.Instance?.Terrain == null) return;
             
-            _terrainProjecter = TerrainManager.Instance.GetWorldToTerrainProjecter();
+            terrainProjecter = TerrainManager.Instance.GetWorldToTerrainProjecter();
             RemapWorldPointsToTerrain();
         }
         
 
         protected virtual void RemapWorldPointsToTerrain()
         {
-            if (_worldPoints.IsNullOrEmpty() || UnityEngine.Terrain.activeTerrain == null) return;
+            if (worldPoints.IsNullOrEmpty() || UnityEngine.Terrain.activeTerrain == null) return;
             
-            _terrainPoints = _worldPoints.Select(p => _terrainProjecter.ReprojectPoint(p)).ToArray();
+            terrainPoints = worldPoints.Select(p => terrainProjecter.ReprojectPoint(p)).ToArray();
 
-            var terrainPointsStr = $"{string.Join(", ", _terrainPoints.Take(10))} {(_terrainPoints.Length > 10 ? "..." : "")}";
-            var terrainPointsAABB = new AABB_2D(_terrainPoints);
+            var terrainPointsStr = $"{string.Join(", ", terrainPoints.Take(10))} {(terrainPoints.Length > 10 ? "..." : "")}";
+            AABB_2D terrainPointsAABB = new(terrainPoints);
             
             Debug.Log("Reprojected Points:\n" +
                       $"Reprojected: <color=teal>{terrainPointsStr}</color>\n" +
-                      $"Reprojected Centroid: <color=cyan>{_terrainPoints.Center()}</color>\n" +
+                      $"Reprojected Centroid: <color=cyan>{terrainPoints.Center()}</color>\n" +
                       $"Reprojected AABB: <color=orange>{terrainPointsAABB}</color>\n");
         }
 
@@ -135,16 +131,17 @@ namespace SILVO.Terrain
 
         public Texture2D texture;
         protected Vector2Int texSize = new(128, 128);
+        protected Projecter WorldToImgProjecter => new(extent, texSize);
         protected virtual void UpdateTexture() => texture = GetTexture();
         public virtual Texture2D GetTexture()
         {
-            Texture2D tex = new Texture2D(texSize.x, texSize.y);
+            Texture2D tex = new(texSize.x, texSize.y);
             
             //Fill texture in Black
             tex.SetPixels(Color.black.ToFilledArray(texSize.x * texSize.y).ToArray());
             
-            // Paint White Points
-            var imagePoints = _worldPoints.Select(p => shape.GetImageProjecter(texSize).ReprojectPoint(p));
+            // Raster White Points
+            var imagePoints = worldPoints.Select(p => WorldToImgProjecter.ReprojectPoint(p));
             foreach (Vector2 point in imagePoints) tex.SetPixel(Mathf.RoundToInt(point.x), Mathf.RoundToInt(point.y), Color.white);
             
             tex.Apply();

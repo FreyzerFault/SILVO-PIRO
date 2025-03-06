@@ -24,7 +24,7 @@ namespace SILVO.Terrain
             }
         }
 
-        private UnityEngine.Terrain _terrain = null;
+        private UnityEngine.Terrain _terrain;
         public UnityEngine.Terrain Terrain => _terrain == null ? _terrain = UnityEngine.Terrain.activeTerrain : _terrain;
         public Vector3 TerrainSize => Terrain.terrainData.size;
         public Vector2 TerrainSize2D => new(TerrainSize.x, TerrainSize.z);
@@ -56,10 +56,10 @@ namespace SILVO.Terrain
         /// </summary>
         private void UpdateDEM()
         {
-            var terrain = UnityEngine.Terrain.activeTerrain;
-            
             if (dem.IsEmpty)
                 throw new Exception("No DEM data found. Try to reimport it");
+            
+            UnityEngine.Terrain terrain = Terrain;
             if (terrain?.terrainData == null)
                 throw new Exception("No active terrain found. Create or enable it");
             

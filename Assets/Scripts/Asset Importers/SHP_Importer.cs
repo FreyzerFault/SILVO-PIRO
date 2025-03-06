@@ -1,8 +1,4 @@
-using System;
-using System.Data;
-using System.Linq;
 using DavidUtils.ExtensionMethods;
-using DotSpatial.Data;
 using SILVO.DotSpatialExtensions;
 using SILVO.Terrain;
 using UnityEditor.AssetImporters;

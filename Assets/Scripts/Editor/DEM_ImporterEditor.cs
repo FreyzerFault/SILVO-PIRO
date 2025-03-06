@@ -29,7 +29,7 @@ namespace SILVO.Editor
             
             // Apply Map to Active Terrain
             if (!dem.IsEmpty && GUILayout.Button("Apply to Terrain")) 
-                TerrainManager.Instance.DEM = dem;
+                importer.ApplyDEM();
         }
 
         private static void AddLabeledValue(string label, string value) => 

@@ -1,7 +1,4 @@
 using System;
-using System.Linq;
-using DavidUtils.ExtensionMethods;
-using DavidUtils.Geometry.Bounding_Box;
 using DavidUtils.Rendering;
 using UnityEngine;
 
@@ -29,7 +26,7 @@ namespace SILVO.Terrain
             
             renderer.UpdateAllObj(
                 renderOnTerrain && UnityEngine.Terrain.activeTerrain != null
-                    ? _terrainPoints
+                    ? terrainPoints
                     : underScaledPoints);
         }
 

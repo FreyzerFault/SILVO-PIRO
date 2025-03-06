@@ -1,3 +1,4 @@
+using System;
 using System.Drawing;
 using System.Linq;
 using DotSpatial.Data;
@@ -8,6 +9,7 @@ using Polygon = DavidUtils.Geometry.Polygon;
 
 namespace SILVO.Terrain
 {
+    [Serializable]
     public class Projecter : IProj
     {
         public Rectangle ImageRectangle { get; }

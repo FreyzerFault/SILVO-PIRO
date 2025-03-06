@@ -1,13 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using Csv;
-using DavidUtils.ExtensionMethods;
 using SILVO.SPP;
 using UnityEditor.AssetImporters;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 namespace SILVO.Asset_Importers
 {

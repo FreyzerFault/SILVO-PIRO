@@ -15,12 +15,14 @@ namespace SILVO.Asset_Importers
         
         public float maxHeight = 0;
         public float minHeight = 0;
+        
+        public void ApplyDEM() => TerrainManager.Instance.DEM = dem;
 
         public override void OnImportAsset(AssetImportContext ctx)
         {
             // Create PREFAB with Sprite
-            var obj = new GameObject();
-            var image = obj.AddComponent<Image>();
+            GameObject obj = new GameObject();
+            Image image = obj.AddComponent<Image>();
             texture = Texture2D.grayTexture;
             image.sprite = CreateSprite(texture);
             
@@ -50,7 +52,8 @@ namespace SILVO.Asset_Importers
             }
         }
         
-        private Sprite CreateSprite(Texture2D texture) => 
+        private static Sprite CreateSprite(Texture2D texture) => 
             Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), Vector2.one * 0.5f);
+
     }
 }

@@ -8,6 +8,7 @@ using DavidUtils.Rendering.Extensions;
 using DotSpatial.Data;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.Operation.Union;
+using SILVO.DotSpatialExtensions;
 using UnityEditor.Graphs;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -65,7 +66,7 @@ namespace SILVO.Terrain
                 _shpfile = value;
                 if (_shpfile == null)
                 {
-                    Debug.LogError($"Shapefile is null", this);
+                    Debug.LogError($"Shapefile set to null", this);
                     return;
                 }
                 
@@ -75,40 +76,49 @@ namespace SILVO.Terrain
                 UpdateTexture();
                 
                 filePath = _shpfile.Filename;
+                loaded = true;
             }
         }
 
-        private void Start()
+        private void Update()
         {
             if (_shpfile == null && filePath.NotNullOrEmpty() && !loaded)
                 LoadShapeFile();
         }
 
-        public void LoadShapeFile()
-        {
-            Shpfile = OpenFile(filePath);
-        }
-        
+        [ContextMenu("Reload Shapefile")]
+        public void LoadShapeFile() => Shpfile = OpenFile(filePath);
 
-        #region SHAPEFILE
+
+        #region FILE HANDLING
 
         [SerializeField] private string filePath;
+
+        public string FilePath
+        {
+            get => filePath;
+            set
+            {
+                filePath = value;
+                if (filePath.NotNullOrEmpty())
+                    LoadShapeFile();
+            }
+        }
+        
         
         public static Shapefile_Component InstantiateShapefile(Shapefile shpfile, int maxSubPolygonCount = PolygonRenderer.DEFAULT_MAX_SUBPOLYGONS_COUNT)
         {
-            var shpfileComp = new GameObject().AddComponent<Shapefile_Component>();
+            Shapefile_Component shpfileComp = new GameObject().AddComponent<Shapefile_Component>();
             shpfileComp.maxSubPolygonCount = maxSubPolygonCount;
             shpfileComp.Shpfile = shpfile;
-            shpfileComp.loaded = true;
             return shpfileComp;
         }
         
         public static Shapefile_Component InstantiateShapefile(string filePath, int maxSubPolygonCount = PolygonRenderer.DEFAULT_MAX_SUBPOLYGONS_COUNT)
         {
-            var shpfileComp = UnityUtils.InstantiateObject<Shapefile_Component>(null);
+            Shapefile_Component shpfileComp = UnityUtils.InstantiateObject<Shapefile_Component>(null);
             shpfileComp.maxSubPolygonCount = maxSubPolygonCount;
-            shpfileComp.Shpfile = OpenFile(filePath);
-            shpfileComp.loaded = true;
+            shpfileComp.FilePath = filePath;
             return shpfileComp;
         }
         
@@ -132,10 +142,11 @@ namespace SILVO.Terrain
         #endregion
 
 
-        #region SHAPES
+        #region Featured SHAPES
 
-        public void InstantiateShapes()
+        private void InstantiateShapes()
         {
+            // Delete children to reinstantiate
             var children = GetComponentsInChildren<SHP_Component>();
             if (children is { Length: > 0 })
                 children.ForEach(UnityUtils.DestroySafe);
@@ -146,21 +157,19 @@ namespace SILVO.Terrain
                 return;
             }
             
-            
             List<ShapeRange> shpIndices = _shpfile.ShapeIndices;
+            
+            // If Features are Single Points, join them in a single Shape of type MultiPoint
             if (FeatureType is FeatureType.Point)
             {
-                // Si son puntos sueltos los unimos en un solo MultiPoint
-                double[][] points = shpIndices.Select((s, i) => _shpfile.GetShape(i, true).Vertices).ToArray();
-                Point[] geom = points.Select(p => new Point(p[0], p[1])).ToArray();
-                var mp = new MultiPoint(geom);
-                var shp = new Shape(mp, FeatureType.MultiPoint);
-                _shpComponents = new List<SHP_Component> {InstantiateShape(shp)};
+                Shape mpShape = shpIndices.Select((_, i) => _shpfile.GetShape(i, true)).ToMultiPoint();
+                _shpComponents = new List<SHP_Component> {InstantiateShape(mpShape)};
             }
             else
             {
+                // Create a SHP_Component for each Shape
                 _shpComponents = shpIndices
-                    .Select((s, i) =>
+                    .Select((_, i) =>
                     {
                         Shape shape = _shpfile.GetShape(i, true);
                         List<PartRange> parts = shpIndices[i].Parts;
@@ -170,6 +179,7 @@ namespace SILVO.Terrain
             }
         }
 
+        
         private SHP_Component InstantiateShape(Shape shp, List<PartRange> parts = null, string label = "", Color color = default)
         {
             SHP_Component shpComp = null;
@@ -189,19 +199,23 @@ namespace SILVO.Terrain
                 case FeatureType.Unspecified:
                 default:
                     Debug.LogError("Shapefile has an unsupported feature type", this);
-                    break;
+                    return null;
             }
-            shpComp.parentExtent = _shpfile.Extent;
-            shpComp.Shape = shp;
+            
+            shpComp.SetParentExtent(_shpfile.Extent);
+            shpComp.SetShape(shp);
             return shpComp;
         }
 
+
+        #region Each FeatureType Instantiation
+        
         private SHP_Component InstantiatePolygon(string label = "", Color color = default)
         {
-            PolygonRenderer renderer = UnityUtils.InstantiateObject<PolygonRenderer>(transform, $"Polygon {label}");
-            renderer.Color = color == default ? firstColor : color;
+            PolygonRenderer polygonRenderer = UnityUtils.InstantiateObject<PolygonRenderer>(transform, $"Polygon {label}");
+            polygonRenderer.Color = color == default ? firstColor : color;
             
-            SHP_Component shpComp = renderer.gameObject.AddComponent<PolygonSHP_Component>();
+            SHP_Component shpComp = polygonRenderer.gameObject.AddComponent<PolygonSHP_Component>();
             ((PolygonSHP_Component)shpComp).maxSubPolygonCount = maxSubPolygonCount;
             return shpComp;
         }
@@ -222,6 +236,8 @@ namespace SILVO.Terrain
             SHP_Component shpComp = pr.gameObject.AddComponent<PointSHP_Component>();
             return shpComp;
         }
+        
+        #endregion
 
         #endregion
 
