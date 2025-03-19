@@ -42,7 +42,7 @@
         "com.unity.inputsystem": "1.12.0",
         "com.azixmcaze.unityserializabledictionary": "1.2.0"
       },
-      "hash": "3c0f1ebc103ede55d10e5b401fd1471c3f193524"
+      "hash": "ef10c47cf547293c015d5dc354e3bad0fcac8dad"
     },
     "com.github-glitchenzo.nugetforunity": {
       "version": "https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity",
