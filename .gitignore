@@ -83,3 +83,6 @@ crashlytics-build.properties
 # Embedded Packages
 /Packages/David-Unity-Utils
 /Packages/Procrain
+
+# Folder Icon Config
+desktop.ini
