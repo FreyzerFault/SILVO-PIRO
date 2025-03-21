@@ -154,23 +154,31 @@ namespace SILVO.GEO_Tools.SHP
         {
             fillColor = fillColor == backgroundColor ? backgroundColor.Invert() : fillColor;
             
+            // TODO Get 
             AABB_2D aabb = GetAABB(shpComps);
             Vector2Int texSize = GetTexProportionalSize(aabb, texRes); 
             Debug.Log($"Tex Size: {texSize}");
             
-            Projecter worldToImgProjecter = new(aabb, texSize);
-            
-            Texture2D[] textures = shpComps.Select(shpComp => shpComp.GetTexture(texSize, worldToImgProjecter, fillColor, backgroundColor)).ToArray();
+            Texture2D[] textures = shpComps.Select(shpComp => shpComp.GetTexture(texRes, fillColor, backgroundColor)).ToArray();
+
+
+            Texture2D texture = new(texSize.x, texSize.y);
+            for (var y = 0; y < texSize.y; y++)
+            for (var x = 0; x < texSize.x; x++)
+            {
+                // TODO: Coger las texturas chiquitas y pasarlas a la grande
+                Vector2Int pixel = new Vector2Int(x, y);
+            }
             
             // Mezcla las texturas sumándolas pixel a pixel
-            Texture2D texture = textures[0];
-            for (var i = 1; i < textures.Length; i++)
-            {
-                Color[] currentPixels = texture.GetPixels();
-                Color[] otherTexPixels = textures[i].GetPixels();
-                texture.SetPixels(currentPixels.Select((pixel, pixIndex) => 
-                    pixel + otherTexPixels[pixIndex]).ToArray());
-            }
+            // Texture2D texture = textures[0];
+            // for (var i = 1; i < textures.Length; i++)
+            // {
+            //     Color[] currentPixels = texture.GetPixels();
+            //     Color[] otherTexPixels = textures[i].GetPixels();
+            //     texture.SetPixels(currentPixels.Select((pixel, pixIndex) => 
+            //         pixel + otherTexPixels[pixIndex]).ToArray());
+            // }
             
             return texture;
         }
