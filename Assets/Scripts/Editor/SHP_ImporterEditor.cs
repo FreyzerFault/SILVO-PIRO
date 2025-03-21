@@ -1,6 +1,7 @@
 using DavidUtils.Editor.DevTools.CustomFields;
-using SILVO.Asset_Importers;
-using SILVO.Terrain;
+using DavidUtils.ExtensionMethods;
+using SILVO.GEO_Tools.Asset_Importers;
+using SILVO.GEO_Tools.SHP;
 using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
@@ -25,7 +26,7 @@ namespace SILVO.Editor
 
             EditorGUILayout.BeginHorizontal();
             
-            TextureGUI(shpfileComp);
+            TextureGUI(shpfileComp.previewTexture);
             
             EditorGUILayout.Separator();
             
@@ -46,20 +47,21 @@ namespace SILVO.Editor
         }
         
         
-        private void TextureGUI(Shapefile_Component shpfileComp)
+        private void TextureGUI(Texture2D tex)
         {
-            EditorGUILayout.BeginVertical("box", GUILayout.MaxWidth(80));
-
-            // Show texture preview in Low Res
-            Texture2D tex = shpfileComp.texture;
+            float maxSize = 80;
+            Vector2 aspectRatio = new Vector2(tex.width, tex.height).AspectRatioUnder1();
+            float width = maxSize * aspectRatio.x;
+            float height = maxSize * aspectRatio.y;
+            EditorGUILayout.BeginVertical("box", GUILayout.MaxWidth(width), GUILayout.MaxHeight(height));
                 
             if (tex == null)
             {
                 EditorGUILayout.LabelField("No texture. Reimport pls", EditorStyles.boldLabel);
-                tex = Texture2D.blackTexture;
+                tex = Texture2D.redTexture;
             }
 
-            EditorGUI.DrawPreviewTexture(GUILayoutUtility.GetRect(128, 128), tex);
+            EditorGUI.DrawPreviewTexture(GUILayoutUtility.GetRect(width, height), tex);
 
             EditorGUILayout.EndVertical();
         }
@@ -71,7 +73,7 @@ namespace SILVO.Editor
             EditorGUILayout.LabelField($"{shpfileComp.ProjectionName}"); // Projection
             EditorGUILayout.LabelField($"{shpfileComp.ShapeCount} " + // Nº Shapes
                                        $"{shpfileComp.FeatureType}" + // Feature Type
-                                       $"{(shpfileComp.ShapeCount > 1 ? "s" : "")}"); // Plural o Singular
+                                       $"{(shpfileComp.ShapeCount > 1 ? "s" : "")}", EditorStyles.boldLabel); // Plural o Singular
             EditorGUILayout.LabelField($"AABB:", EditorStyles.boldLabel); // Min Max
             EditorGUILayout.LabelField($"Min: {shpfileComp.Min}");
             EditorGUILayout.LabelField($"Max: {shpfileComp.Max}");
@@ -87,8 +89,9 @@ namespace SILVO.Editor
             
             // TEXTURE SIZE
             {
-                // MyInputFields.InputField(serializedObject, "shpfileComponent.texSize", "Texture Size",
-                //     () => ((SHP_Importer)target).shpfileComponent.UpdateTexture());
+                SerializedProperty resProp = serializedObject.FindProperty("previewTextureResolution");
+                if (resProp != null)
+                    resProp.intValue = EditorGUILayout.IntField("Preview Resolution:", resProp.intValue);
             }
             
             // MAX SUB POLYGON COUNT

@@ -42,7 +42,8 @@ RenderSettings:
 --- !u!157 &4
 LightmapSettings:
   m_ObjectHideFlags: 0
-  serializedVersion: 12
+  serializedVersion: 13
+  m_BakeOnSceneLoad: 0
   m_GISettings:
     serializedVersion: 2
     m_BounceScale: 1
@@ -92,8 +93,10 @@ LightmapSettings:
     m_ExportTrainingData: 0
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
-  m_LightingDataAsset: {fileID: 112000001, guid: 38b6b4289210e3546924419738a007ba, type: 2}
-  m_LightingSettings: {fileID: 4890085278179872738, guid: 7b373da39b21e413f975bcf005681963, type: 2}
+  m_LightingDataAsset: {fileID: 112000001, guid: 38b6b4289210e3546924419738a007ba,
+    type: 2}
+  m_LightingSettings: {fileID: 4890085278179872738, guid: 7b373da39b21e413f975bcf005681963,
+    type: 2}
 --- !u!196 &5
 NavMeshSettings:
   serializedVersion: 2

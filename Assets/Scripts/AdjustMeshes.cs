@@ -7,7 +7,10 @@ namespace SILVO
 {
     public class AdjustMeshes : MonoBehaviour
     {
-        public void AdjustMeshesToOrigin()
+        /// <summary>
+        ///     Coloca una mesh Boca Arriba y en el origen
+        /// </summary>
+        public void AdjustMeshesToOriginUpwards()
         {
             var meshFilters = GetComponentsInChildren<MeshFilter>();
             var meshes = meshFilters.Select(mf => mf.mesh).ToArray();

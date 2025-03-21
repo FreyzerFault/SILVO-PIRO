@@ -8,7 +8,9 @@ ScriptedImporter:
   assetBundleName: 
   assetBundleVariant: 
   script: {fileID: 11500000, guid: ae4f54fc11df409d9732b09e20eeab44, type: 3}
-  shpfileComponent: {fileID: 8368143971865083686, guid: 9bf4db7193a039142b09794ad84f8424,
+  shpfileComponent: {fileID: -6180541618966543871, guid: 9bf4db7193a039142b09794ad84f8424,
     type: 3}
-  maxSubPolygonCount: 100
-  terrainOffset: 1000
+  maxSubPolygonCount: 10
+  previewTextureResolution: 128
+  onTerrain: 1
+  terrainOffset: 200

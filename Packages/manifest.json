@@ -13,9 +13,9 @@
     }
   ],
   "dependencies": {
-    "com.david.utils": "https://github.com/FreyzerFault/David-Unity-Utils.git",
-    "com.david.procrain": "https://github.com/FreyzerFault/Procrain.git",
     "com.coffee.git-dependency-resolver": "https://github.com/mob-sakai/GitDependencyResolverForUnity.git",
+    "com.david.procrain": "https://github.com/FreyzerFault/Procrain.git",
+    "com.david.utils": "git@github.com:FreyzerFault/David-Unity-Utils.git",
     "com.github-glitchenzo.nugetforunity": "https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity",
     "com.unity.2d.sprite": "1.0.0",
     "com.unity.cinemachine": "2.10.3",

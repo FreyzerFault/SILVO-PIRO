@@ -34,7 +34,7 @@
       "hash": "a08a5b66dee9315a5d1fc7bf0dc5305280332954"
     },
     "com.david.utils": {
-      "version": "https://github.com/FreyzerFault/David-Unity-Utils.git",
+      "version": "git@github.com:FreyzerFault/David-Unity-Utils.git",
       "depth": 0,
       "source": "git",
       "dependencies": {
@@ -42,7 +42,7 @@
         "com.unity.inputsystem": "1.12.0",
         "com.azixmcaze.unityserializabledictionary": "1.2.0"
       },
-      "hash": "ef10c47cf547293c015d5dc354e3bad0fcac8dad"
+      "hash": "5e856682aafcb5e7c2a3fe8f73e173b54df71430"
     },
     "com.github-glitchenzo.nugetforunity": {
       "version": "https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity",
