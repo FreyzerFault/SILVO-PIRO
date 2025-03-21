@@ -11,6 +11,6 @@ ScriptedImporter:
   shpfileComponent: {fileID: -6180541618966543871, guid: 9bf4db7193a039142b09794ad84f8424,
     type: 3}
   maxSubPolygonCount: 10
-  previewTextureResolution: 128
+  previewTextureResolution: 170
   onTerrain: 1
   terrainOffset: 200
